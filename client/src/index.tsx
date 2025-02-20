@@ -1,8 +1,9 @@
-// import { useState, useEffect } from "react";
-import React, { useCallback, useEffect } from "react"
-import { render } from "react-dom"
-import Excalidraw from "@excalidraw/excalidraw"
+import "./polyfill";
 
+import React, {useCallback, useEffect} from "react"
+import { render } from "react-dom"
+import { Excalidraw } from "@excalidraw/excalidraw"
+import {ExcalidrawImperativeAPI} from "@excalidraw/excalidraw/types/types";
 import { ConfigProps } from "./types"
 import { getJsonScript, noop } from "./utils"
 import { CollaborationCommunicator, ReplayCommunicator } from "./communication"
@@ -71,7 +72,7 @@ type WindowEK = EventKey<WindowEventMap>
 type DocEK = EventKey<DocumentEventMap>
 
 function IndexPage() {
-  let draw = useCommunicatorExcalidrawRef(communicator)
+  const draw = useCommunicatorExcalidrawRef(communicator) as React.MutableRefObject<ExcalidrawImperativeAPI | null>;
   let connectionState = useConnectionState(communicator)
   useEffect(() => {
     window.draw = draw
@@ -95,7 +96,7 @@ function IndexPage() {
   return connectionState == "CONNECTED" ? (
     <div className="excalidraw">
       <Excalidraw
-        ref={draw}
+        excalidrawAPI={(api) => {draw.current = api}}
         initialData={initialData}
         onPointerUpdate={communicator.broadcastCursorMovement}
         onChange={communicator.broadcastElements}
@@ -111,7 +112,7 @@ function IndexPage() {
         langCode={config.LANGUAGE_CODE}
         onLibraryChange={saveLibrary}
         libraryReturnUrl={config.LIBRARY_RETURN_URL}
-        renderTopRightUI={TopRightUI(config)}
+        // renderTopRightUI={TopRightUI(config)}
       />
       {config.IS_REPLAY_MODE && <ReplayControls communicator={communicator as ReplayCommunicator} />}
     </div>

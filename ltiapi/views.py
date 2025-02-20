@@ -3,7 +3,6 @@ from pprint import pformat
 from typing import List, Optional, cast
 from uuid import UUID
 
-import aiohttp
 from asgiref.sync import async_to_sync, sync_to_async
 from django.conf import settings
 from django.contrib.auth import login
@@ -34,75 +33,6 @@ async def start_consumer_registration(request: HttpRequest, link: m.OneOffRegist
 
 def render_registration_error(request: HttpRequest, error: str, status: int = 400):
     return render(request, 'ltiapi/register_consumer_result.html', {'error': error}, status=status)
-
-async def register_consumer(request: HttpRequest, link: m.OneOffRegistrationLink):
-    """ This is executed when the consumer confirms the registration of the LTI app. """
-    if link.registered_consumer is not None:
-        return render_registration_error(
-            request,
-            _('The registration link has already been used. Please ask '
-              'the admin of the LTI app for a new registration link.'),
-            status=403)
-
-    # prepare for getting data about the consumer
-    openid_config_endpoint = request.GET.get('openid_configuration')
-    jwt_str = request.GET.get('registration_token')
-
-    if not openid_config_endpoint:
-        logger.warning(
-            "a client tried to register but did not supply the proper parameters. The supplied "
-            "parameters are:\n%s", pformat(request.GET.lists))
-        return render_registration_error(
-            request,
-            _("No configuration endpoint was found in the parameters. Are you trying to "
-              "register a legacy LTI consumer? This app only supports LTI 1.3 Advantage."))
-
-    async with aiohttp.ClientSession() as session:
-        # get information about how to register to the consumer
-        logger.info('Getting registration data from "%s"', openid_config_endpoint)
-        resp = await session.get(openid_config_endpoint)
-        openid_config = await resp.json()
-
-        # send registration to the consumer
-        tool_provider_registration_endpoint = openid_config['registration_endpoint']
-        registration_data = lti_registration_data(request)
-        logger.info('Registering tool at "%s"', tool_provider_registration_endpoint)
-        resp = await session.post(
-            tool_provider_registration_endpoint,
-            json=registration_data,
-            headers={
-                'Authorization': 'Bearer ' + jwt_str,
-                'Accept': 'application/json'
-            })
-        openid_registration = await resp.json()
-    try:
-        # use the information about the registration to regsiter the consumer to this app
-        consumer = await make_tool_config_from_openid_config_via_link(openid_config, openid_registration, link)
-    except AssertionError as e:
-        # error if the data from the consumer is missing mandatory information
-        logger.warning('Registration failed: %s', e)
-        return render_registration_error(request, e.args[0])
-
-    await sync_to_async(link.registration_complete)(consumer)
-
-    logging.info(
-        'Registration of issuer "%s" with client %s complete',
-        consumer.issuer, consumer.client_id)
-    return render(request, 'ltiapi/register_consumer_result.html', {'link': link, 'registration_success': True})
-
-
-async def dynamic_consumer_registration(request: HttpRequest, link: UUID):
-    """
-    This View implements LTI Advantage Automatic registration. It supports GET for the user
-    to control the configuration steps and POST, which starts the consumer configuration.
-    """
-    link_obj = await async_get_object_or_404(m.OneOffRegistrationLink, id=link)
-    if request.method == "GET":
-        return await start_consumer_registration(request, link_obj)
-    else:
-        return await register_consumer(request, link_obj)
-dynamic_consumer_registration.csrf_exempt = True # type: ignore
-dynamic_consumer_registration.xframe_options_exempt = True # type: ignore
 
 
 async def oidc_jwks(

@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node esbuild.js",
     "watch": "node eswatch.js",
-    "typecheck": "tsc --noEmit --skipLibCheck"
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "dev": "pnpm run watch & pnpm run typecheck"
   },
   "author": "Lukas Menzel, EduTec@DIPF <praktikum_alice@dipf.de>",
   "license": "MIT",
@@ -19,7 +20,7 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
-    "@excalidraw/excalidraw": "^0.11.0",
+    "@excalidraw/excalidraw": "^0.17.6",
     "esbuild": "^0.14.54",
     "lodash": "^4.17.21",
     "qrcode-generator": "^1.4.4",
@@ -27,5 +28,10 @@
     "react-dom": "^17.0.2",
     "reconnectingwebsocket": "^1.0.0",
     "svg-gauge": "^1.0.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
