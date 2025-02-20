@@ -16,7 +16,6 @@ from faker import Faker
 from draw.utils import Chain, dump_content, user_id_for_room
 from draw.utils.auth import user_is_authenticated, user_is_authorized, user_is_staff
 from draw.utils.django_loaded import LoggingAsyncJsonWebsocketConsumer
-from ltiapi.models import CustomUser
 
 from . import models as m
 
@@ -27,7 +26,7 @@ bulk_create_records = database_sync_to_async(m.ExcalidrawLogRecord.objects.bulk_
 upsert_room = database_sync_to_async(m.ExcalidrawRoom.objects.update_or_create)
 get_or_create_room = database_sync_to_async(m.ExcalidrawRoom.objects.get_or_create)
 auth_room = database_sync_to_async(
-    m.ExcalidrawRoom.objects.only("room_name", "room_consumer", "tracking_enabled").get_or_create)
+    m.ExcalidrawRoom.objects.only("room_name", "tracking_enabled").get_or_create)
 stored_pseudonym_for_user_in_room = database_sync_to_async(
     m.Pseudonym.stored_pseudonym_for_user_in_room)
 
@@ -72,7 +71,7 @@ class CollaborationConsumer(LoggingAsyncJsonWebsocketConsumer):
     async def connect(self):
         # pylint: disable=attribute-defined-outside-init
         self.kwargs = self.scope['url_route']['kwargs']
-        self.user: CustomUser = self.scope['user']
+        self.user: m.CustomUser = self.scope['user']
         self.room_name = self.kwargs['room_name']
         room, _ = await auth_room(room_name=self.room_name)
         self.tracking_enabled = room.tracking_enabled
@@ -334,7 +333,7 @@ class ReplayConsumer(LoggingAsyncJsonWebsocketConsumer):
         return task
 
     async def connect(self):
-        self.user: CustomUser = self.scope.get('user')
+        self.user: m.CustomUser = self.scope.get('user')
         if not await user_is_staff(self.user):
             return await self.disconnect(3000)
 

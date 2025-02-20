@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin.actions import delete_selected
 from django.contrib import messages
+from django.contrib.auth.admin import UserAdmin
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
@@ -46,7 +47,6 @@ class ExcalidrawRoomAdmin(admin.ModelAdmin):
         "room_created_by",
         "tracking_enabled",
         ("created_at", "last_update"),
-        ("room_consumer", "room_course_id"),
         "room_link",
         "room_json",
         "replay_link"
@@ -95,7 +95,7 @@ class ExcalidrawRoomAdmin(admin.ModelAdmin):
     def clone_rooms(self, request, queryset):
         new_rooms = []
         for room in queryset:
-            new_rooms.append(room.clone(None, request.user, room.room_consumer))
+            new_rooms.append(room.clone(None, request.user))
         self.message_user(
             request,
             _("Rooms created: %s") % ", ".join([r.room_name for r in new_rooms]),
@@ -120,6 +120,3 @@ class ExcalidrawFileAdmin(admin.ModelAdmin):
             src=obj.content.url,
             title=_("image %s for room %s") % (obj.element_file_id, obj.belongs_to_id))
 
-@admin.register(m.CourseToRoomMapper)
-class CourseToRoomMapperAdmin(admin.ModelAdmin):
-    list_display = ['__str__', 'room_id', 'mode', 'lti_data_room']

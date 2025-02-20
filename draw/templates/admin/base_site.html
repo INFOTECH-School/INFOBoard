@@ -4,3 +4,10 @@
 {% block extrahead %}{{ block.super }}
 <link rel="stylesheet" href="{% static 'admin/custom-styles.css' %}" />
 {% endblock %}
+{% block branding %}
+  <h1 id="site-name">
+    <a href="{% url 'admin:index' %}">
+      <img src="{% static 'admin/TABLICA.png' %}" height="60px">
+    </a>
+  </h1>
+{% endblock branding %}

@@ -89,10 +89,7 @@ def user_is_authorized(user: User, room: Room, session: SessionBase) -> bool:
     # is_authenticated is needed because AnonymousUser don't has the attrs below.
     return user.is_authenticated and (
         (user.is_staff and user.has_perm("collab.view_excalidrawroom"))
-        or user.is_superuser
-        or room.room_consumer_id is None
-        or (user.registered_via_id == room.room_consumer_id
-            and (room.room_course_id is None or room.room_course_id in allowed_course_ids)))
+        or user.is_superuser)
 
 
 def require_login(async_func: Callable[..., HttpResponse]):

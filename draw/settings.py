@@ -38,16 +38,14 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # Application definition
 
 INSTALLED_APPS = [
-    'collab',
-    'ltiapi',
-    'pylti1p3.contrib.django.lti1p3_tool_config',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'channels'
+    'channels',
+    'collab',
 ]
 
 MIDDLEWARE = [
@@ -151,7 +149,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # https://docs.djangoproject.com/en/3.2/topics/auth/customizing/#auth-custom-user
-AUTH_USER_MODEL = 'ltiapi.CustomUser'
+AUTH_USER_MODEL = 'collab.CustomUser'
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#csrf-trusted-origins
 
