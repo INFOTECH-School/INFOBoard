@@ -94,7 +94,7 @@ async def index(request: HttpRequest, *args, **kwargs):
                 reverse_with_query('admin:login', query_kwargs={'next': f'/{make_room_name(24)}/'}))
 
     else:
-        return HttpResponseBadRequest(_('Automatic room creation is disabled here.'))
+        return redirect(absolute_reverse(request, 'dashboard'))
 
 
 async def room(request: HttpRequest, room_name: str):

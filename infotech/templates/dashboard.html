@@ -17,19 +17,20 @@
         <div class="container-fluid">
           <div class="navbar-menu-wrapper d-flex align-items-center justify-content-between">
             <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
-                <a class="navbar-brand brand-logo" href="index.html"><img src="{% static 'TABLICA.png' %}" alt="logo"/></a>
-                <a class="navbar-brand brand-logo-mini" href="index.html"><img src="{% static 'TABLICA.png' %}" alt="logo"/></a>
+                <a class="navbar-brand brand-logo" href="{% url 'dashboard' %}"><img src="{% static 'TABLICA.png' %}" alt="logo"/></a>
+                <a class="navbar-brand brand-logo-mini" href="{% url 'dashboard' %}"><img src="{% static 'TABLICA.png' %}" alt="logo"/></a>
             </div>
             <ul class="navbar-nav navbar-nav-right">
                 <li class="nav-item nav-profile dropdown">
                   <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" id="profileDropdown">
-                    <span class="nav-profile-name">{{ request.user }}</span>
-                    <img src="images/faces/face28.png" alt="profile"/>
-                  </a>
+                    <span class="nav-profile-name">{{ request.user.first_name }} {{ request.user.last_name }}</span>
+                    <img src="https://www.gravatar.com/avatar/2c7d99fe281ecd3bcd65ab915bac6dd5?s=250" alt="profile"/>
                   <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="profileDropdown">
                       <a class="dropdown-item">
                         <i class="mdi mdi-logout text-primary"></i>
-                        Wyloguj
+                        <form method="post" action="{% url 'admin:logout' %}">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-link">Wyloguj</button></form>
                       </a>
                   </div>
                 </li>
@@ -44,7 +45,7 @@
 						<div class="col-sm-6 mb-4 mb-xl-0">
 							<div class="d-lg-flex align-items-center">
 								<div>
-									<h3 class="text-dark font-weight-bold mb-2">Hej <b>{{ request.user }}</b>, Witaj ponownie!</h3>
+									<h3 class="text-dark font-weight-bold mb-2">Hej <b>{{ request.user.first_name }}</b>, witaj ponownie!</h3>
                   <h6>Twoje tablice:</h6>
 								</div>
 							</div>
@@ -79,8 +80,8 @@
         <footer class="footer">
           <div class="footer-wrap">
             <div class="d-sm-flex justify-content-center justify-content-sm-between">
-              <span class="text-muted text-center text-sm-left d-block d-sm-inline-block">Copyright © <a href="https://infotech.edu.pl/" target="_blank">infotech.edu.pl</a> {{ now_year }}</span>
-              <span class="float-none float-sm-right d-block mt-1 mt-sm-0 text-center">Writing by <b> Maciej Jakubowicz </b> IT Specjalist</span>
+              <span class="text-muted text-center text-sm-left d-block d-sm-inline-block">Copyright © <a href="https://infotech.edu.pl/" target="_blank">infotech.edu.pl</a> {{ year }}</span>
+              <span class="float-none float-sm-right d-block mt-1 mt-sm-0 text-center">Made by <b> IT </b> Department of INFOTECH</span>
             </div>
           </div>
         </footer>
