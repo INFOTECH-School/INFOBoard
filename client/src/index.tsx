@@ -112,7 +112,7 @@ function IndexPage() {
         langCode={config.LANGUAGE_CODE}
         onLibraryChange={saveLibrary}
         libraryReturnUrl={config.LIBRARY_RETURN_URL}
-        // renderTopRightUI={TopRightUI(config)}
+        renderTopRightUI={TopRightUI(config)}
       />
       {config.IS_REPLAY_MODE && <ReplayControls communicator={communicator as ReplayCommunicator} />}
     </div>

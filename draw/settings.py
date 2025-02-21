@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'channels',
     'collab',
+    'infotech'
 ]
 
 MIDDLEWARE = [
@@ -188,18 +189,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 # DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# Settings for LTI ToolConfig
-# see lti.tool_config.py
-
-LTI_CONFIG = {
-    'title': 'Hyperchalk',
-    'description': 'Make drawing assignments for your students. Supports single and group work.',
-    'vendor_name': 'EduTec@DIPF',
-    'vendor_url': 'https://www.edutec.science/',
-    'vendor_contact_name': 'Sebastian Gombert',
-    'vendor_contact_email': 'gombert@dipf.de',
-}
 
 # Create custom room when user visits the index page
 SHOW_CREATE_ROOM_PAGE = False
