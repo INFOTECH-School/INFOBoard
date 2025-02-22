@@ -26,8 +26,8 @@ from .utils.auth import user_is_staff_view
 
 from dash import views as dash_views
 
-admin.site.site_title = "Hyperchalk"
-admin.site.site_header = _("Hyperchalk Admin Page")
+admin.site.site_title = "INFOBoard Admin Portal"
+admin.site.site_header = _("INFOBoard Admin Page")
 
 urlpatterns = [
     path('admin/login/', dash_views.login, name='admin-login'),

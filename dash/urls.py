@@ -1,9 +1,10 @@
+from django.shortcuts import redirect
 from django.urls import path
 
 from dash import views
 
 urlpatterns = [
-    path('my', views.my_tables, name='my'),
+    path('', views.redirect_to_my, name='index'),
     path('login', views.login, name='custom_login'),
-    path('new_table', views.new_table, name='new_table'),
+    path('my', views.MyBoardView.as_view(), name='my'),
 ]

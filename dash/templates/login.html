@@ -34,7 +34,7 @@
                                     <div class="text-center">
                                         <h4 class="text-dark mb-4">Zaloguj sie do INFOBoard!</h4>
                                     </div>
-                                    <form class="user" method="post" action="{% url 'custom_login' %}">
+                                    <form class="user" method="post" action="{% url 'custom_login' %}?next={{ request.GET.next|default:'' }}">
                                       {% csrf_token %}
                                         <div class="mb-3"><input class="form-control form-control-user" type="text" id="username" aria-describedby="emailHelp" placeholder="Nazwa użytkownika" name="username"></div>
                                         <div class="mb-3"><input class="form-control form-control-user" type="password" id="password" placeholder="Hasło" name="password"></div>

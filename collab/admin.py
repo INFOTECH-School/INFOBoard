@@ -45,6 +45,7 @@ class ExcalidrawLogRecordAdmin(admin.ModelAdmin):
 class ExcalidrawRoomAdmin(admin.ModelAdmin):
     fields = [
         "room_name",
+        "user_room_name",
         "room_created_by",
         "tracking_enabled",
         ("created_at", "last_update"),
@@ -53,9 +54,9 @@ class ExcalidrawRoomAdmin(admin.ModelAdmin):
         "replay_link"
     ]
     readonly_fields = [
-        "room_json", "replay_link", "room_link", "last_update", "created_at",
+        "room_name", "room_json", "replay_link", "room_link", "last_update", "created_at",
         "compressed_size", "uncompressed_size", "compression_degree"]
-    list_display = ["__str__", "room_link", "compressed_size", "created_at", "last_update"]
+    list_display = ["user_room_name", "room_link", "compressed_size", "created_at", "last_update"]
     actions = ["discard_unused_rooms", "clone_rooms"]
 
     @admin.display(description=_("View Room"))

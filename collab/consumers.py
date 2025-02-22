@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Set
 
 from channels.db import database_sync_to_async
+from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.conf import settings
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import now
@@ -318,13 +319,12 @@ def get_log_record_info_for_room(room_name):
 MAX_WAIT_TIME = timedelta(milliseconds=settings.BROADCAST_RESOLUTION_THROTTLE_MSEC)
 
 
-class ReplayConsumer(LoggingAsyncJsonWebsocketConsumer):
-    # pylint: disable=attribute-defined-outside-init
+class ReplayConsumer(AsyncJsonWebsocketConsumer):
     allowed_eventtypes = {'start_replay', 'pause_replay', 'restart_replay'}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._tasks: Set[asyncio.Task] = set()
+        self._tasks: set[asyncio.Task] = set()
 
     def create_task(self, coro, *, name=None):
         task = asyncio.create_task(coro, name=name)
@@ -333,43 +333,52 @@ class ReplayConsumer(LoggingAsyncJsonWebsocketConsumer):
         return task
 
     async def connect(self):
+        # Pobierz użytkownika i sprawdź uprawnienia
         self.user: m.CustomUser = self.scope.get('user')
         if not await user_is_staff(self.user):
+            logger.debug("User %s is not staff", self.user)
             return await self.disconnect(3000)
 
-        url_route: dict = self.scope.get('url_route')
-        self.room_name = url_route['kwargs']['room_name']
+        logger.debug("User %s is staff", self.user)
+        url_route: dict = self.scope.get('url_route', {})
+        room_name_value = url_route.get('kwargs', {}).get('room_name')
 
-        # this will be fun :)
+        try:
+            # Konwertujemy room_name na UUID – jeśli się nie uda, wychodzimy
+            self.room_name = uuid.UUID(room_name_value)
+        except (ValueError, TypeError):
+            logger.error("Invalid room_name UUID: %s", room_name_value)
+            return await self.disconnect(3000)
+
+        # Inicjalizacja pseudonimów użytkowników
         faker = Faker()
         self.encountered_user_pseudonyms = defaultdict(faker.name)
 
-        # ensure that the task is not canceled while sending a message but only while sleeping.
+        # Upewniamy się, że task nie zostanie przerwany w trakcie wysyłania wiadomości
         self.message_was_sent_condition = asyncio.Condition()
 
         await super().connect()
-        await self.send_json({'eventtype': 'pause_replay'}) # reset the control button on connect
-
+        # Połączenie zostało nawiązane – wysyłamy reset przycisku sterowania
+        await self.send_json({'eventtype': 'pause_replay'})
 
     async def receive_json(self, content, *args, **kwargs):
         """
-        Received messages that are unknown are logged but don't throw an exception.
+        Loguje nieznane wiadomości bez rzucania wyjątku.
         """
         try:
             await super().receive_json(content, *args, **kwargs)
         except ValueError as e:
-            logger.debug(e)
+            logger.debug("ValueError in receive_json: %s", e)
 
     async def disconnect(self, code):
         if await self.cancel_replay_task():
-            logger.debug('client disconnected before replay of room %s finished.', self.room_name)
+            logger.debug('Client disconnected before replay of room %s finished.', self.room_name)
         return await super().disconnect(code)
 
     async def cancel_replay_task(self) -> bool:
         """
-        Waits until the replay task can be canceled (i.e. while it sleeps) and does that.
-
-        :returns: if a task was canceled
+        Przerywa zadanie replay, jeśli jest aktywne.
+        :returns: True, jeśli zadanie zostało anulowane.
         """
         if hasattr(self, 'replay_task') and hasattr(self, 'message_was_sent_condition'):
             async with self.message_was_sent_condition:
@@ -378,6 +387,9 @@ class ReplayConsumer(LoggingAsyncJsonWebsocketConsumer):
         return False
 
     async def init_replay(self):
+        """
+        Inicjalizuje replay, obliczając całkowity czas trwania na podstawie logów.
+        """
         self.log_record_info = await get_log_record_info_for_room(room_name=self.room_name)
 
         prev_record_time = self.log_record_info[0][1]
@@ -387,7 +399,7 @@ class ReplayConsumer(LoggingAsyncJsonWebsocketConsumer):
             prev_record_time = curr_record_time
         duration = int(delta.total_seconds() * 1000)
 
-        logger.debug("replay initialized. duration: %d", duration)
+        logger.debug("Replay initialized. Duration: %d ms", duration)
 
         await self.send_json({
             'eventtype': 'reset_scene',
@@ -395,7 +407,7 @@ class ReplayConsumer(LoggingAsyncJsonWebsocketConsumer):
         })
 
     async def start_replay(self, *args, **kwargs):
-        logger.info('start replay mode for room %s', self.room_name)
+        logger.info('Start replay mode for room %s', self.room_name)
         if not getattr(self, 'log_record_info', []):
             await self.init_replay()
         self.replay_task = self.create_task(self.send_then_wait())
@@ -403,11 +415,11 @@ class ReplayConsumer(LoggingAsyncJsonWebsocketConsumer):
 
     async def pause_replay(self, *args, **kwargs):
         if await self.cancel_replay_task():
-            logger.debug('replay for room %s paused.', self.room_name)
+            logger.debug('Replay for room %s paused.', self.room_name)
             await self.send_json({'eventtype': 'pause_replay'})
 
     async def restart_replay(self, *args, **kwargs):
-        logger.debug('restart replay of room %s', self.room_name)
+        logger.debug('Restart replay of room %s', self.room_name)
         await self.cancel_replay_task()
         await self.init_replay()
         await self.start_replay()
@@ -432,22 +444,19 @@ class ReplayConsumer(LoggingAsyncJsonWebsocketConsumer):
 
     async def send_then_wait(self):
         if self.log_record_info:
-            recs = Chain(self)['log_record_info']
-            current_timestamp: datetime = recs[0][1]()
-            next_timestamp: Optional[datetime] = recs[1][1]()
-            sleep_time = \
-                min(MAX_WAIT_TIME, next_timestamp - current_timestamp) \
-                if next_timestamp else timedelta(0)
+            # Jeśli mamy co najmniej dwa wpisy, obliczamy czas oczekiwania
+            if len(self.log_record_info) >= 2:
+                current_timestamp = self.log_record_info[0][1]
+                next_timestamp = self.log_record_info[1][1]
+                sleep_delta = next_timestamp - current_timestamp
+                sleep_time = min(MAX_WAIT_TIME, sleep_delta)
+            else:
+                sleep_time = timedelta(0)
 
             async with self.message_was_sent_condition:
                 await self.send_next_event()
-                # print(
-                #     f'sent event. {len(self.log_record_info)} events remain. will '
-                #     f'sleep for {sleep_time.total_seconds():.2f} seconds.         ',
-                #     end="\r", file=sys.stderr)
             await asyncio.sleep(sleep_time.total_seconds())
             self.replay_task = self.create_task(self.send_then_wait())
         else:
-            # print(file=sys.stderr)
             async with self.message_was_sent_condition:
                 await self.send_json({'eventtype': 'pause_replay'})

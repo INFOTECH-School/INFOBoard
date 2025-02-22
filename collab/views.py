@@ -6,8 +6,8 @@ from urllib.parse import urlunsplit
 from channels.db import database_sync_to_async
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.http import HttpRequest, HttpResponseBadRequest
-from django.shortcuts import redirect, render
+from django.http import HttpRequest, HttpResponseBadRequest, Http404
+from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -51,7 +51,6 @@ def custom_messages():
     }
 
 async def room(request: HttpRequest, room_name: str):
-    validate_room_name(room_name)
     room_obj, username = await asyncio.gather(
         async_get_object_or_404(m.ExcalidrawRoom, room_name=room_name),
         get_username(request.user))

@@ -219,8 +219,8 @@ def uncompressed_json_size(uncompressed_content: JSONType):
 def flatten_list(l: list):
     return [flatten_list(e) if isinstance(e, list) else e for e in l]
 
-def user_id_for_room(uid: uuid.UUID, room_name: str):
-    return sha256(uid.bytes + b":" + room_name.encode('utf-8')).hexdigest()
+def user_id_for_room(uid: uuid.UUID, room_name: uuid.UUID):
+    return sha256(uid.bytes + b":" + room_name.bytes).hexdigest()
 
 def make_room_name(length):
     return "".join(random.choices(string.ascii_letters + string.digits, k=length))

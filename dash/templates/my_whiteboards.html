@@ -20,19 +20,19 @@
     {% endfor %}
   {% endif %}
   <div id="wrapper">
-    <nav class="navbar align-items-start sidebar sidebar-dark accordion bg-gradient-primary p-0 navbar-dark">
+    <nav class="navbar align-items-start sidebar sidebar-dark accordion bg-gradient-primary p-0 navbar-dark toggled">
       <div class="container-fluid d-flex flex-column p-0">
         <a class="navbar-brand d-flex justify-content-center align-items-center sidebar-brand m-0" href="#" style="background: url({% static 'TABLICA.png' %}) center / contain no-repeat;width: 100%;"></a>
         <hr class="sidebar-divider my-0">
         <ul class="navbar-nav text-light" id="accordionSidebar">
           <li class="nav-item">
-            <a class="nav-link active" href="{% url 'my' %}">
+            <a class="nav-link active" href="{% url 'my' %}" style="font-size: 0.9rem;">
               <i class="far fa-list-alt"></i>
               <span>Moje Tablice</span>
             </a>
-            <a class="nav-link disabled" href="/infotech/templates/shered_whiteboards.htmled_whiteboards.html">
+            <a class="nav-link disabled" href="/infotech/templates/shered_whiteboards.htmled_whiteboards.html" style="font-size: 0.9rem;">
               <i class="far fa-share-square"></i>
-              <span>Udostępnione dla mnie</span>
+              <span>Wspólne Tablice</span>
             </a>
           </li>
         </ul>
@@ -73,12 +73,13 @@
               <i class="fas fa-plus fa-sm text-white-50"></i>&nbsp;Nowa Tablica
             </a>
           </div>
-          <div class="row" style="overflow-y: scroll;height: 70vh;">
+          <div id="cards" class="row" style="overflow-y: scroll;height: 70vh;">
+          {% if tables %}
             {% for table in tables %}
               <div class="col-md-6 col-xl-3 mb-4">
                 <div class="card shadow border-left-success py-2">
                   <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
-                    <h6 class="text-primary fw-bold m-0">{{ table.room_name }}</h6>
+                    <span class="text-primary fw-bold m-0 text-wrap">{{ table.user_room_name }}</span>
                     <div class="dropdown no-arrow">
                       <button class="btn btn-link btn-sm dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" type="button">
                         <i class="fas fa-ellipsis-v text-gray-400"></i>
@@ -88,7 +89,14 @@
                         <a class="dropdown-item disabled" href="#">Udostępnij</a>
                         <a class="dropdown-item disabled" href="#">Zmień nazwę</a>
                         <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="#">Usuń</a>
+                        <!-- Link otwierający modal, przekazuje id i nazwę tablicy -->
+                        <a class="dropdown-item delete-board" href="#"
+                           data-board-id="{{ table.room_name }}"
+                           data-board-name="{{ table.user_room_name }}"
+                           data-bs-toggle="modal"
+                           data-bs-target="#deleteBoardModal">
+                          Usuń
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -96,8 +104,8 @@
                     <div class="row g-0 align-items-center">
                       <div class="col me-2">
                         <div class="text-uppercase text-primary fw-bold text-xs mb-1">
-                          <span class="d-lg-flex justify-content-lg-start">Właściciel: {{ table.room_created_by.first_name }} {{ table.room_created_by.last_name }}</span>
-                          <span class="d-lg-flex justify-content-lg-start">Edytowano: {{ table.last_update }}</span>
+                          <span class="d-lg-flex justify-content-lg-start">Edytowano:&nbsp<b>{{ table.last_update }}</b></span>
+                          <span class="d-lg-flex justify-content-lg-start">Utworzono: {{ table.created_at }}</span>
                         </div>
                         <div class="text-dark fw-bold h5 mb-0">
                           <hr>
@@ -111,13 +119,35 @@
                 </div>
               </div>
             {% endfor %}
+          {% else %}
+            <div class="col-md-6 col-xl-3 mb-4">
+              <div class="card shadow border-left-danger py-2">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
+                  <span class="text-primary fw-bold m-0">Brak tablic</span>
+                </div>
+                <div class="card-body" style="background: transparent;">
+                  <div class="row g-0 align-items-center">
+                    <div class="col me-2">
+                      <div class="text-uppercase text-primary fw-bold text-xs mb-1">
+                        <span class="d-lg-flex justify-content-lg-start">Utwórz nową tablicę</span>
+                      </div>
+                      <div class="text-dark fw-bold h5 mb-0">
+                        <hr>
+                        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#nowaTablicaModal">Nowa Tablica</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endif %}
           </div>
         </div>
       </div>
       <footer class="bg-white sticky-footer">
         <div class="container my-auto">
           <div class="text-center my-auto copyright">
-            <span>Copyright © INFOBoard 2025</span>
+            <span>Copyright © INFOBoard {{ YEAR }}</span>
           </div>
           <div class="text-center my-auto copyright">
             <span>v{{ VERSION }}</span>
@@ -125,9 +155,6 @@
         </div>
       </footer>
     </div>
-    <a class="border rounded d-inline scroll-to-top" href="#page-top">
-      <i class="fas fa-angle-up"></i>
-    </a>
   </div>
 
   <!-- Modal: Nowa Tablica -->
@@ -138,12 +165,12 @@
           <h5 class="modal-title" id="nowaTablicaModalLabel">Nowa Tablica</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
         </div>
-        <form method="POST" action="{% url 'new_table' %}">
+        <form method="POST" action="{% url 'my' %}">
           <div class="modal-body">
             {% csrf_token %}
             <div class="mb-3">
               <label for="tablicaNazwa" class="form-label">Nazwa Tablicy</label>
-              <input type="text" class="form-control" id="tablicaNazwa" name="room_name" minlength="5" maxlength="100" placeholder="Wprowadź nazwę tablicy" required>
+              <input type="text" class="form-control" id="tablicaNazwa" name="room_name" minlength="5" maxlength="17" placeholder="Wprowadź nazwę tablicy" required>
             </div>
           </div>
           <div class="modal-footer">
@@ -155,7 +182,52 @@
     </div>
   </div>
 
+  <!-- Modal: Potwierdzenie usunięcia tablicy -->
+  <div class="modal fade" id="deleteBoardModal" tabindex="-1" aria-labelledby="deleteBoardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteBoardModalLabel">Potwierdzenie usunięcia tablicy</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+        </div>
+        <form method="POST" action="{% url 'my' %}">
+          {% csrf_token %}
+          <div class="modal-body">
+            <p>Czy na pewno chcesz usunąć tablicę <strong id="modalBoardName"></strong>?</p>
+            <input type="hidden" name="room_name" id="modalBoardId" value="">
+            <input type="hidden" name="_method" value="DELETE">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+            <button type="submit" class="btn btn-danger">Usuń</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
   <script src="{% static 'assets/bootstrap/js/bootstrap.min.js' %}"></script>
   <script src="{% static 'assets/js/theme.js' %}"></script>
+
+  <!-- Skrypt do obsługi modalu usuwania tablicy -->
+  <script>
+  // Pobierz referencję do modalu
+  var deleteBoardModal = document.getElementById('deleteBoardModal');
+
+  // Nasłuchuj zdarzenia otwarcia modalu
+  deleteBoardModal.addEventListener('show.bs.modal', function (event) {
+    // Element, który wywołał otwarcie modalu
+    var button = event.relatedTarget;
+    // Pobierz dane z atrybutów data
+    var boardName = button.getAttribute('data-board-name');
+    var boardId = button.getAttribute('data-board-id');
+
+    // Ustaw treść i wartość w modalu
+    var modalBoardName = deleteBoardModal.querySelector('#modalBoardName');
+    var modalBoardId = deleteBoardModal.querySelector('#modalBoardId');
+
+    modalBoardName.textContent = boardName;
+    modalBoardId.value = boardId;
+  });
+</script>
 </body>
 </html>

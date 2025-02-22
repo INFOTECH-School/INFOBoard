@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/3.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
+import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
@@ -81,6 +82,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'dash.context_processors.version',
+                'dash.context_processors.year',
             ],
         },
     },
@@ -223,7 +225,8 @@ def finalize_settings(final_locals: Dict[str, Any]):
         raise ImproperlyConfigured(
             f'The following mandatory keys are missing from your config: {missing}')
 
-SOFT_VERSION = '1.0.0'
+SOFT_VERSION = '0.6.0'
+NOW_YEAR = datetime.datetime.now().year
 
 LOGIN_URL = 'custom_login'
 LOGIN_REDIRECT_URL = '/my'

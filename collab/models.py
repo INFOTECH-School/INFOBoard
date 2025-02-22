@@ -53,7 +53,7 @@ class ExcalidrawLogRecord(models.Model):
     # dates are sorted after field size. this reduces table size in postgres.
     _compressed = models.BooleanField(editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    room_name = models.CharField(max_length=24, validators=[validate_room_name])
+    room_name = models.UUIDField()
     event_type = models.CharField(max_length=50)
     # if a user is deleted, keep the foreign key to be able to keep the action log
     user_pseudonym = models.CharField(
@@ -106,12 +106,12 @@ class ExcalidrawRoom(models.Model):
     """
     created_at = models.DateTimeField(auto_now_add=True)
     last_update = models.DateTimeField(auto_now=True)
-    room_name = models.CharField(
-        primary_key=True, max_length=24,
-        validators=[validate_room_name])
+    room_name = models.UUIDField(
+        primary_key=True, default=uuid.uuid4)
     room_created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
     tracking_enabled = models.BooleanField(_("track users' actions"), default=settings.ENABLE_TRACKING_BY_DEFAULT)
     _elements = models.BinaryField(blank=True, default=EMPTY_JSON_LIST_ZLIB_COMPRESSED)
+    user_room_name = models.CharField(max_length=24, editable=True, null=False, blank=False, default=make_room_name(17))
 
     @property
     def elements(self):
