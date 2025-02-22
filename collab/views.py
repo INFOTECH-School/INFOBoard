@@ -91,10 +91,10 @@ async def index(request: HttpRequest, *args, **kwargs):
             return redirect(request.build_absolute_uri(room_uri), permanent=False)
         else:
             return redirect(
-                reverse_with_query('admin:login', query_kwargs={'next': f'/{make_room_name(24)}/'}))
+                reverse_with_query('custom_login', query_kwargs={'next': f'/{make_room_name(24)}/'}))
 
     else:
-        return redirect(absolute_reverse(request, 'dashboard'))
+        return redirect(absolute_reverse(request, 'my'))
 
 
 async def room(request: HttpRequest, room_name: str):

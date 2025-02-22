@@ -24,14 +24,15 @@ from django.views import generic
 from .api import api
 from .utils.auth import user_is_staff_view
 
-from infotech import views as infotech_views
+from dash import views as dash_views
 
 admin.site.site_title = "Hyperchalk"
 admin.site.site_header = _("Hyperchalk Admin Page")
 
 urlpatterns = [
+    path('admin/login/', dash_views.login, name='admin-login'),
     path('admin/', admin.site.urls),
-    path('dash/', infotech_views.dashboard, name='dashboard'),
+    path('', include('dash.urls'), name='dash'),
     path('is-staff/', user_is_staff_view, name='is-staff'),
     path('favicon.ico', generic.RedirectView.as_view(url=static_file('favicon.ico'))),
     path('', include('collab.urls')),

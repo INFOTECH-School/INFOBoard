@@ -2,7 +2,8 @@
 {% load static %}
 
 {% block extrahead %}{{ block.super }}
-<link rel="stylesheet" href="{% static 'admin/custom-styles.css' %}" />
+  <link rel="stylesheet" href="{% static 'admin/custom-styles.css' %}" />
+  <link rel="icon" href="{% static 'fav.png' %}">
 {% endblock %}
 {% block branding %}
   <h1 id="site-name">

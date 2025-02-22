@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'channels',
     'collab',
-    'infotech'
+    'dash'
 ]
 
 MIDDLEWARE = [
@@ -80,6 +80,7 @@ TEMPLATES = [
                 'django.template.context_processors.media',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'dash.context_processors.version',
             ],
         },
     },
@@ -221,3 +222,9 @@ def finalize_settings(final_locals: Dict[str, Any]):
     if missing:
         raise ImproperlyConfigured(
             f'The following mandatory keys are missing from your config: {missing}')
+
+SOFT_VERSION = '1.0.0'
+
+LOGIN_URL = 'custom_login'
+LOGIN_REDIRECT_URL = '/my'
+LOGOUT_REDIRECT_URL = 'custom_login'
