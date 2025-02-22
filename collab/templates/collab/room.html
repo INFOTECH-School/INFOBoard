@@ -34,6 +34,14 @@
       .addEventListener("click", window.close)
   </script>
   {% endif %}
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}" role="alert" style="position: fixed;bottom: 10px;left: 10px;z-index: 1000">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
   <div id="app"></div>
   {% csrf_token %}
   <script>
