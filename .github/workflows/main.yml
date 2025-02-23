@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IMAGE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || 'main' }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -36,5 +35,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:${{ env.IMAGE_TAG }}
-            ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
+            ghcr.io/${{ toLower(github.repository) }}:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ toLower(github.repository) }}:latest
