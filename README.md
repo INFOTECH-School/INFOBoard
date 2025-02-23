@@ -1,3 +1,4 @@
+![TABLICA](https://github.com/user-attachments/assets/bc54746e-1b9e-4839-b0c1-6716cfbebc46)
 # INFOBoard
 
 **INFOBoard** is a Django-based web application that enables users to create, edit, and collaborate on digital boards (powered by Excalidraw) in real time. The project is designed for educational and team collaboration purposes and includes features like real-time collaboration, logging of board events, user and group management, and multi-architecture Docker deployments.
