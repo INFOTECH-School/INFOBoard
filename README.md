@@ -1,30 +1,20 @@
-# Hyperchalk – Excalidraw for LTI
+# INFOBoard
 
-Hyperchalk is a port of the [Excalidraw](https://excalidraw.com) app to support LTI and data
-collection, enabling its usage for learning analytics in LMS courses.
+**INFOBoard** is a Django-based web application that enables users to create, edit, and collaborate on digital boards (powered by Excalidraw) in real time. The project is designed for educational and team collaboration purposes and includes features like real-time collaboration, logging of board events, user and group management, and multi-architecture Docker deployments.
 
-If you use Hyperchalk in your scientific work, please cite this paper ([biblatex here][bib]):
+## Features
 
-> Lukas Menzel, Sebastian Gombert, Daniele Di Mitri and Hendrik Drachsler. "Superpowers in the
-> Classroom: Hyperchalk is an Online Whiteboard for Learning Analytics Data Collection". In:
-> Proceedings of the 17th European Conference on Technology Enhanced Learning. Mai 2022.
+- **Board Creation & Editing:** Create and edit digital boards collaboratively.
+- **Read-Only Mode:** View boards without editing permissions.
+- **Collaboration Logging:** Track board events such as full syncs and element changes.
+- **Custom User Management:** Uses a custom UUID-based user model for enhanced privacy and user aliasing.
+- **Group Access Control:** Organize boards into groups (via the `BoardGroups` model) for structured access.
+- **File Handling:** Manage board-associated files using the `ExcalidrawFile` model.
+- **Multi-Architecture Docker Build:** Build and push Docker images for multiple architectures using GitHub Actions.
 
-[bib]: https://github.com/Hyperchalk/Hyperchalk/blob/main/citation.bib
+## Requirements
 
-## Documentation
-
-**[View the documentation page](https://hyperchalk.github.io/guide/)**
-
-## Known Issues
-
-### Cloning LMS-Courses with Hyperchalk content
-
-When a course (C0) is cloned (C1) in an LMS, Hyperchalk will detect that and clone any Whiteboards
-set up whithin the course C0 to C1. However, when a cloned course (C1) gets cloned again (C2),
-Hyperchalk will register that clone C2 as a clone of the original course C0. It will thus not
-"clone-clone" any changes made to the clone C1 to C2, but it will copy C0 to C2 instead.
-
-There is no easy fix for this because this would need a possibility to change LTI custom data after
-the LTI tool configuration process when Hyperchalk is set up for the first time in a course C0. Even
-the cloning detection mechanism required an additional table in the database and a lot of code for
-such a simple feature.
+- Python 3.8 or later
+- Django 3.2+ (or a compatible version)
+- A database (e.g., PostgreSQL, SQLite, etc.)
+- Docker (optional, for containerized deployment)
