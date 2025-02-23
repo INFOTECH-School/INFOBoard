@@ -12,7 +12,8 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from draw.utils import absolute_reverse, async_get_object_or_404, make_room_name, reverse_with_query, validate_room_name
-from draw.utils.auth import Unauthenticated, require_staff_user, user_is_authenticated, user_is_staff
+from draw.utils.auth import Unauthenticated, require_staff_user, user_is_authenticated, user_is_staff, \
+    group_and_login_required, owner_required
 
 from . import models as m
 from .utils import get_or_create_room, room_access_check
@@ -50,15 +51,11 @@ def custom_messages():
         'FILE_TOO_LARGE': _("The file you've added is too large."),
     }
 
+@owner_required
 async def room(request: HttpRequest, room_name: str):
     room_obj, username = await asyncio.gather(
         async_get_object_or_404(m.ExcalidrawRoom, room_name=room_name),
         get_username(request.user))
-
-    try:
-        await room_access_check(request, room_obj)
-    except Unauthenticated:
-        return redirect(reverse_with_query('admin:login', query_kwargs={'next': request.path}))
 
     is_lti_room, is_staff, file_dicts = await asyncio.gather(
         course_exists(room_obj),
@@ -104,4 +101,23 @@ async def replay(request: HttpRequest, room_name: str, **kwargs):
         'custom_messages': custom_messages(),
         'initial_elements': [],
         'files': await get_file_dicts(room_obj)
+    })
+
+@group_and_login_required
+async def read_only(request: HttpRequest, room_name: str, **kwargs):
+    room_obj = await async_get_object_or_404(m.ExcalidrawRoom, room_name=room_name)
+    return render(request, 'collab/room.html', {
+        'excalidraw_config': {
+            'FILE_URL_TEMPLATE': absolute_reverse(request, 'api-1:put_file', kwargs={
+                'room_name': room_name, 'file_id': '{file_id}'}),
+            'IS_READONLY_MODE': True,
+            'LANGUAGE_CODE': settings.LANGUAGE_CODE,
+            'LIBRARY_RETURN_URL': absolute_reverse(request, 'collab:add-library'),
+            'ROOM_NAME': room_name,
+            'SOCKET_URL': reverse_ws_url(request, "collaborate", room_name),
+        },
+        'custom_messages': custom_messages(),
+        'initial_elements': room_obj.elements,
+        'files': await get_file_dicts(room_obj),
+        'room': room_obj,
     })

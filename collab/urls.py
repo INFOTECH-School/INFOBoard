@@ -10,4 +10,5 @@ urlpatterns = [
          name='add-library'),
     path('<room_name>/', views.room, name='room'),
     path('<room_name>/replay/', views.replay, name='replay-room'),
+    path('<room_name>/read-only/', views.read_only, name='read-only-room'),
 ]

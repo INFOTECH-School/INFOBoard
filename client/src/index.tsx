@@ -56,6 +56,7 @@ const defaultConfig: ConfigProps = {
   SOCKET_URL: "",
   UPLOAD_RETRY_TIMEOUT_MSEC: 1_000,
   USER_NAME: "",
+  IS_READONLY_MODE: false,
 }
 
 const config: ConfigProps = { ...defaultConfig, ...getJsonScript("excalidraw-config") }
@@ -64,7 +65,7 @@ const msg: Record<string, string> = getJsonScript("custom-messages")
 const initialData = config.IS_REPLAY_MODE ? getInitialReplayData() : getInitialData(config.ROOM_NAME)
 
 const ws = new ReconnectingWebSocket(config.SOCKET_URL)
-let communicator = config.IS_REPLAY_MODE
+let communicator = config.IS_READONLY_MODE
   ? new ReplayCommunicator(config, ws)
   : new CollaborationCommunicator(config, ws, initialData.files ?? {})
 
@@ -78,9 +79,9 @@ function IndexPage() {
     window.draw = draw
   }, [draw])
 
-  const saveStateToLocalStorage = config.IS_REPLAY_MODE ? useCallback(noop, []) : useSaveState(draw, config.ROOM_NAME)
+  const saveStateToLocalStorage = config.IS_READONLY_MODE ? useCallback(noop, []) : useSaveState(draw, config.IS_READONLY_MODE)
 
-  const saveToServerImmediately = config.IS_REPLAY_MODE
+  const saveToServerImmediately = config.IS_READONLY_MODE
     ? useCallback(noop, [])
     : useCallback(() => (communicator as CollaborationCommunicator).saveRoomImmediately(), [communicator])
 
@@ -106,7 +107,7 @@ function IndexPage() {
             clearCanvas: false,
           },
         }}
-        viewModeEnabled={config.IS_REPLAY_MODE}
+        viewModeEnabled={config.IS_READONLY_MODE}
         autoFocus={true}
         handleKeyboardGlobally={true}
         langCode={config.LANGUAGE_CODE}

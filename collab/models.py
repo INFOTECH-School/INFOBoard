@@ -7,7 +7,7 @@ from typing import Optional, TypeVar
 from urllib.request import urlopen
 
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Group
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.validators import MinLengthValidator
@@ -170,6 +170,9 @@ class ExcalidrawRoom(models.Model):
 
         return self
 
+    def __str__(self):
+        return f"{self.user_room_name} -- {self.room_created_by}"
+
 
 class Pseudonym(models.Model):
     """
@@ -257,3 +260,19 @@ class ExcalidrawFile(models.Model):
 
     def __repr__(self) -> str:
         return f"<ExcalidrawFile {self.element_file_id} for room {self.belongs_to_id}>"
+
+
+class BoardGroups(models.Model):
+    """
+    Groups of boards.
+
+    This is used to group boards together. This is useful for
+    example to group boards by course.
+    """
+    name = models.CharField(max_length=255, unique=True)
+    owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='owner_group', default=None)
+    users = models.ManyToManyField(CustomUser, related_name='users_group')
+    boards = models.ManyToManyField(ExcalidrawRoom, related_name='boards')
+
+    def __str__(self):
+        return f"{self.name} ({self.owner})"

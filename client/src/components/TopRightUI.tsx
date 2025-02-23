@@ -7,7 +7,7 @@ export default function TopRightUI(config: ConfigProps) {
     <div className="topright Island App-toolbar" style={{ "--padding": 1 } as any}>
       <label
         title="Wróć"
-        onClick={() => window.location.href = "/my"}
+        onClick={() => window.history.back()}
         className="zen-mode-transition"
       >
         {/* Ukryty checkbox, aby zachować styl Excalidraw */}

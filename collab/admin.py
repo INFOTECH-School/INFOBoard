@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin.actions import delete_selected
 from django.contrib import messages
-from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.admin import UserAdmin, Group
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
@@ -9,6 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from . import models as m
 
 admin.site.register(m.CustomUser, UserAdmin)
+admin.site.unregister(Group)
 
 @admin.register(m.ExcalidrawLogRecord)
 class ExcalidrawLogRecordAdmin(admin.ModelAdmin):
@@ -122,3 +123,12 @@ class ExcalidrawFileAdmin(admin.ModelAdmin):
             src=obj.content.url,
             title=_("image %s for room %s") % (obj.element_file_id, obj.belongs_to_id))
 
+@admin.register(m.BoardGroups)
+class BoardGroupsAdmin(admin.ModelAdmin):
+    fields = [
+        "name",
+        "owner",
+        'users',
+        'boards'
+    ]
+    filter_horizontal = ['users', 'boards']

@@ -40,6 +40,7 @@ export interface ConfigProps {
   USER_COLOR?: UserColor
   USER_IS_STAFF?: boolean
   USER_NAME: string
+  IS_READONLY_MODE: boolean
 }
 
 export enum WsState {

@@ -6,7 +6,12 @@ from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
 from django.contrib.sessions.backends.base import SessionBase
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
+from django.shortcuts import redirect
 from django.utils.translation import gettext_lazy as _
+from django.contrib import messages
+
+from collab.models import BoardGroups, ExcalidrawRoom
+from draw.utils import async_get_object_or_404
 
 User = Union[AbstractBaseUser, AnonymousUser]
 
@@ -109,3 +114,61 @@ def require_login(async_func: Callable[..., HttpResponse]):
 @require_staff_user()
 async def user_is_staff_view(request):
     return HttpResponse('', status=200)
+
+
+@sync_to_async
+def user_in_board_group(room_obj, user):
+    return BoardGroups.objects.filter(boards=room_obj, users=user).exists()
+
+@sync_to_async
+def check_is_owner(room_obj, user):
+    return room_obj.room_created_by == user
+
+def group_and_login_required(view_func):
+    """
+    Dekorator sprawdzający, czy użytkownik jest zalogowany oraz czy jest właścicielem tablicy
+    lub należy do grupy, w której znajduje się dana tablica.
+    """
+
+    @wraps(view_func)
+    async def _wrapped_view(request, room_name, *args, **kwargs):
+        # Sprawdź, czy użytkownik jest zalogowany
+        if not await sync_to_async(lambda: request.user.is_authenticated)():
+            messages.add_message(request, 30, _("Użytkownik musi być zalogowany!"), 'danger')
+            return redirect('custom_login')
+
+        # Pobierz obiekt tablicy – zakładamy, że async_get_object_or_404 jest dostępny
+        room_obj = await async_get_object_or_404(ExcalidrawRoom, room_name=room_name)
+
+        # Sprawdź, czy użytkownik jest właścicielem tablicy
+        is_owner = await check_is_owner(room_obj, request.user)
+        # Sprawdź, czy użytkownik należy do grupy, która zawiera tę tablicę
+        is_in_group = await user_in_board_group(room_obj, request.user)
+
+        if not (is_owner or is_in_group):
+            messages.add_message(request, 30, _("Nie masz uprawnień do tej tablicy!"), 'danger')
+            return redirect('my')
+
+        return await view_func(request, room_name, *args, **kwargs)
+
+    return _wrapped_view
+
+def owner_required(view_func):
+    @wraps(view_func)
+    async def _wrapped_view(request, room_name, *args, **kwargs):
+        # Sprawdzenie, czy użytkownik jest zalogowany
+        is_authenticated = await sync_to_async(lambda: request.user.is_authenticated)()
+        if not is_authenticated:
+            return HttpResponseForbidden("Użytkownik musi być zalogowany.")
+
+        # Pobranie obiektu tablicy asynchronicznie
+        room_obj = await async_get_object_or_404(ExcalidrawRoom, room_name=room_name)
+
+        # Sprawdzenie, czy użytkownik jest właścicielem tablicy
+        is_owner = await sync_to_async(lambda: room_obj.room_created_by == request.user)()
+        if not is_owner and not request.user.is_staff:
+            messages.add_message(request, 30, _("Nie jesteś właścicielem tej tablicy!"), 'danger')
+            return redirect('my')
+
+        return await view_func(request, room_name, *args, **kwargs)
+    return _wrapped_view
