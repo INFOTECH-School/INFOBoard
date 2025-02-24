@@ -125,9 +125,12 @@ class ExcalidrawFileAdmin(admin.ModelAdmin):
 
 @admin.register(m.BoardGroups)
 class BoardGroupsAdmin(admin.ModelAdmin):
+    readonly_fields = ['code']
     fields = [
-        "name",
-        "owner",
+        'class_name',
+        'class_year',
+        'code',
+        'owner',
         'users',
         'boards'
     ]

@@ -38,9 +38,14 @@
               <span>Wspólne Tablice</span>
             </a>
             <hr>
-            <a class="nav-link" href="{% url 'my_board_groups' %}" style="font-size: 0.9rem;">
+            <a class="nav-link {% if request.resolver_match.url_name == 'my_board_groups' %}active{% endif %}" href="{% url 'my_board_groups' %}" style="font-size: 0.9rem;">
               <i class="far fa-handshake"></i>
               <span>Moje Grupy</span>
+            </a>
+            <hr>
+            <a class="nav-link {% if request.resolver_match.url_name == 'shared_board_groups' %}active{% endif %}" href="{% url 'shared_board_groups' %}" style="font-size: 0.9rem;">
+              <i class="far fa-handshake"></i>
+              <span>Wspólne Grupy</span>
             </a>
             <hr>
           </li>

@@ -15,18 +15,18 @@
               <div class="row g-0 align-items-center">
                 <div class="col me-2">
                   <div class="text-uppercase text-primary fw-bold text-xs mb-1">
+                    <span class="d-lg-flex justify-content-lg-start">Edytowano: {{ table.last_update }}</span>
+                    <span class="d-lg-flex justify-content-lg-start">Utworzono: {{ table.created_at }}</span>
+                    <hr>
                     {% for group in table.boards.all %}
                       <span class="d-lg-flex justify-content-lg-start">Grupa: {{ group.name }}</span>
                     {% endfor %}
                     <span class="d-lg-flex justify-content-lg-start">Właściciel:&nbsp<b>{{ table.room_created_by.first_name }} {{ table.room_created_by.last_name }}</b></span>
-                    <hr>
-                    <span class="d-lg-flex justify-content-lg-start">Edytowano: {{ table.last_update }}</span>
-                    <span class="d-lg-flex justify-content-lg-start">Utworzono: {{ table.created_at }}</span>
                   </div>
                   <div class="text-dark fw-bold h5 mb-0">
                     <hr>
                     <a href="{% url 'collab:room' table.room_name %}read-only">
-                      <button class="btn btn-primary" type="button">Zobacz</button>
+                      <button class="btn btn-primary" type="button">Zobacz Tablice</button>
                     </a>
                   </div>
                 </div>

@@ -1,4 +1,6 @@
 import mimetypes
+import random
+import string
 import uuid
 from functools import cached_property
 from hashlib import sha256
@@ -10,7 +12,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser, Group
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
-from django.core.validators import MinLengthValidator
+from django.core.validators import MinLengthValidator, MaxLengthValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -262,6 +264,18 @@ class ExcalidrawFile(models.Model):
         return f"<ExcalidrawFile {self.element_file_id} for room {self.belongs_to_id}>"
 
 
+def generate_join_code(length=8):
+    """Generate a random join code composed of uppercase letters and digits."""
+    characters = string.ascii_uppercase + string.digits
+    return ''.join(random.choices(characters, k=length))
+
+def generate_unique_join_code(length=8):
+    code = generate_join_code(length)
+    while BoardGroups.objects.filter(code=code).exists():
+        code = generate_join_code(length)
+    return code
+
+
 class BoardGroups(models.Model):
     """
     Groups of boards.
@@ -269,10 +283,19 @@ class BoardGroups(models.Model):
     This is used to group boards together. This is useful for
     example to group boards by course.
     """
-    name = models.CharField(max_length=255, unique=True)
+    group_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    class_name = models.CharField(max_length=50, default='default')
+    class_year = models.IntegerField(default=2025)
+    code = models.CharField(max_length=10, unique=True, editable=False, default="")
+    category = models.CharField(max_length=50, choices=[('podstawowy', 'podstawowy'), ('średnio-zaawansowany', 'średnio-zaawansowany'), ('zaawansowany', 'zaawansowany')], default='podstawowa')
     owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='owner_group', default=None)
-    users = models.ManyToManyField(CustomUser, related_name='users_group')
-    boards = models.ManyToManyField(ExcalidrawRoom, related_name='boards')
+    users = models.ManyToManyField(CustomUser, related_name='users_group', blank=True)
+    boards = models.ManyToManyField(ExcalidrawRoom, related_name='boards', blank=True)
 
     def __str__(self):
-        return f"{self.name} ({self.owner})"
+        return f"{self.class_name} {self.class_year} {self.category} {self.owner}"
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = generate_unique_join_code()
+        super().save(*args, **kwargs)
