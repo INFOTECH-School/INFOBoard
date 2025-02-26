@@ -25,7 +25,6 @@ frozenlist==1.5.0
 gunicorn==20.1.0
 h11==0.14.0
 httpcore==1.0.7
-httptools==0.3.0
 httpx==0.28.1
 hyperlink==21.0.0
 idna==3.10
@@ -62,7 +61,6 @@ typing_extensions==4.12.2
 tzdata==2025.1
 urllib3==2.3.0
 uvicorn==0.17.6
-uvloop==0.16.0
 websockets==10.4
 yarl==1.18.3
 zope.interface==7.2
