@@ -37,6 +37,7 @@ urlpatterns = [
     path('favicon.ico', generic.RedirectView.as_view(url=static_file('favicon.ico'))),
     path('', include('collab.urls')),
     path('api/', api.urls),
+    path('auth/', include('social_django.urls', namespace='social')),
 ]
 
 if settings.DEBUG:

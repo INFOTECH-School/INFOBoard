@@ -19,7 +19,7 @@
                     <span class="d-lg-flex justify-content-lg-start">Utworzono: {{ table.created_at }}</span>
                     <hr>
                     {% for group in table.boards.all %}
-                      <span class="d-lg-flex justify-content-lg-start">Grupa: {{ group.name }}</span>
+                      <span class="d-lg-flex justify-content-lg-start">Grupa: {{ group.class_name }} {{ group.class_year }}</span>
                     {% endfor %}
                     <span class="d-lg-flex justify-content-lg-start">Właściciel:&nbsp<b>{{ table.room_created_by.first_name }} {{ table.room_created_by.last_name }}</b></span>
                   </div>

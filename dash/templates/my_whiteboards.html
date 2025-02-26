@@ -10,30 +10,36 @@
 {% block content %}
   <div id="cards" class="row" style="overflow-y: scroll;height: 70vh;">
     {% if tables %}
-      {% for table in tables %}
+      {% for board in tables %}
         <div class="col-md-6 col-xl-3 mb-4">
           <div class="card shadow border-left-success py-2">
             <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
-              <span class="text-primary fw-bold m-0 text-wrap">{{ table.user_room_name }}</span>
+              <span class="text-primary fw-bold m-0 text-wrap">{{ board.user_room_name }}</span>
               <div class="dropdown no-arrow">
                 <button class="btn btn-link btn-sm dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" type="button">
                   <i class="fas fa-ellipsis-v text-gray-400"></i>
                 </button>
                 <div class="dropdown-menu shadow dropdown-menu-end animated--fade-in">
                   <p class="text-center dropdown-header">Akcje</p>
-                  <a class="dropdown-item disabled" href="#">Udostępnij</a>
-                  <a class="dropdown-item rename-board" href="#"
-                     data-board-id="{{ table.room_name }}"
-                     data-board-name="{{ table.user_room_name }}"
+                  <!-- Use pre-computed board.group_ids for the share button -->
+                  <a class="dropdown-item share-board-btn" href="#"
+                     data-board-id="{{ board.room_name }}"
+                     data-board-groups="{{ board.group_ids }}"
+                     data-bs-toggle="modal"
+                     data-bs-target="#shareBoardModal">
+                     Udostępnianie
+                  </a>
+                  <a class="dropdown-item rename-board-btn" href="#"
+                     data-board-id="{{ board.room_name }}"
+                     data-board-name="{{ board.user_room_name }}"
                      data-bs-toggle="modal"
                      data-bs-target="#renameBoardModal">
                     Zmień nazwę
                   </a>
                   <div class="dropdown-divider"></div>
-                  <!-- Link otwierający modal, przekazuje id i nazwę tablicy -->
                   <a class="dropdown-item delete-board" href="#"
-                     data-board-id="{{ table.room_name }}"
-                     data-board-name="{{ table.user_room_name }}"
+                     data-board-id="{{ board.room_name }}"
+                     data-board-name="{{ board.user_room_name }}"
                      data-bs-toggle="modal"
                      data-bs-target="#deleteBoardModal">
                     Usuń
@@ -45,12 +51,12 @@
               <div class="row g-0 align-items-center">
                 <div class="col me-2">
                   <div class="text-uppercase text-primary fw-bold text-xs mb-1">
-                    <span class="d-lg-flex justify-content-lg-start">Edytowano:&nbsp<b>{{ table.last_update }}</b></span>
-                    <span class="d-lg-flex justify-content-lg-start">Utworzono: {{ table.created_at }}</span>
+                    <span class="d-lg-flex justify-content-lg-start">Edytowano:&nbsp;<b>{{ board.last_update }}</b></span>
+                    <span class="d-lg-flex justify-content-lg-start">Utworzono: {{ board.created_at }}</span>
                   </div>
                   <div class="text-dark fw-bold h5 mb-0">
                     <hr>
-                    <a href="{% url 'collab:room' table.room_name %}">
+                    <a href="{% url 'collab:room' board.room_name %}">
                       <button class="btn btn-primary" type="button">Edytuj Tablice</button>
                     </a>
                   </div>
@@ -84,6 +90,7 @@
     {% endif %}
   </div>
 {% endblock %}
+
 {% block modals %}
   <!-- Modal: Nowa Tablica -->
   <div class="modal fade" id="nowaTablicaModal" tabindex="-1" aria-labelledby="nowaTablicaModalLabel" aria-hidden="true">
@@ -149,9 +156,8 @@
               <label for="renameBoardInput" class="form-label">Nowa nazwa tablicy</label>
               <input type="text" class="form-control" id="renameBoardInput" name="new_room_name" required maxlength="17" minlength="5">
             </div>
-            <!-- Ukryte pole do przekazania identyfikatora tablicy -->
+            <!-- Hidden field for board id -->
             <input type="hidden" name="room_name" id="renameBoardId" value="">
-            <!-- Możesz dodać ukryty input do metody, np. "PUT" lub "PATCH" -->
             <input type="hidden" name="_method" value="PUT">
           </div>
           <div class="modal-footer">
@@ -162,42 +168,82 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal: Udostępnij tablicę grupom -->
+  <div class="modal fade" id="shareBoardModal" tabindex="-1" aria-labelledby="shareBoardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="shareBoardModalLabel">Udostępnij tablicę grupom</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+        </div>
+        <form method="POST" action="{% url 'share_board' %}">
+          {% csrf_token %}
+          <div class="modal-body">
+            <!-- Hidden input for board id -->
+            <input type="hidden" name="board_id" id="shareBoardId" value="">
+            <p>Wybierz grupy, do których chcesz udostępnić tę tablicę:</p>
+            <div class="mb-3">
+              {% for group in groups %}
+                <div class="form-check">
+                  <input class="form-check-input group-checkbox" type="checkbox" name="groups" id="groupCheckbox{{ group.group_id }}" value="{{ group.group_id }}">
+                  <label class="form-check-label" for="groupCheckbox{{ group.group_id }}">
+                    {{ group.class_name }} ({{ group.class_year }}) - {{ group.category }}
+                  </label>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+            <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 {% endblock %}
+
 {% block extra_script %}
-  <!-- Skrypt do obsługi modalu usuwania tablicy -->
   <script>
-  // Pobierz referencję do modalu
-  var deleteBoardModal = document.getElementById('deleteBoardModal');
+    // Modal: Delete Board
+    var deleteBoardModal = document.getElementById('deleteBoardModal');
+    deleteBoardModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      var boardName = button.getAttribute('data-board-name');
+      var boardId = button.getAttribute('data-board-id');
+      var modalBoardName = deleteBoardModal.querySelector('#modalBoardName');
+      var modalBoardId = deleteBoardModal.querySelector('#modalBoardId');
+      modalBoardName.textContent = boardName;
+      modalBoardId.value = boardId;
+    });
 
-  // Nasłuchuj zdarzenia otwarcia modalu
-  deleteBoardModal.addEventListener('show.bs.modal', function (event) {
-    // Element, który wywołał otwarcie modalu
-    var button = event.relatedTarget;
-    // Pobierz dane z atrybutów data
-    var boardName = button.getAttribute('data-board-name');
-    var boardId = button.getAttribute('data-board-id');
+    // Modal: Rename Board
+    var renameBoardModal = document.getElementById('renameBoardModal');
+    renameBoardModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      var boardName = button.getAttribute('data-board-name');
+      var boardId = button.getAttribute('data-board-id');
+      var inputField = renameBoardModal.querySelector('#renameBoardInput');
+      var hiddenField = renameBoardModal.querySelector('#renameBoardId');
+      inputField.value = boardName;
+      hiddenField.value = boardId;
+    });
 
-    // Ustaw treść i wartość w modalu
-    var modalBoardName = deleteBoardModal.querySelector('#modalBoardName');
-    var modalBoardId = deleteBoardModal.querySelector('#modalBoardId');
-
-    modalBoardName.textContent = boardName;
-    modalBoardId.value = boardId;
-  });
-  </script>
-  <script>
-  var renameBoardModal = document.getElementById('renameBoardModal');
-  renameBoardModal.addEventListener('show.bs.modal', function (event) {
-    // Element, który wywołał otwarcie modalu
-    var button = event.relatedTarget;
-    // Pobierz aktualną nazwę i identyfikator tablicy z atrybutów data
-    var boardName = button.getAttribute('data-board-name');
-    var boardId = button.getAttribute('data-board-id');
-    // Ustaw wartość pola tekstowego i ukrytego pola
-    var inputField = renameBoardModal.querySelector('#renameBoardInput');
-    var hiddenField = renameBoardModal.querySelector('#renameBoardId');
-    inputField.value = boardName;
-    hiddenField.value = boardId;
-  });
+    // Modal: Share Board with Groups
+    var shareBoardModal = document.getElementById('shareBoardModal');
+    shareBoardModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      var boardId = button.getAttribute('data-board-id');
+      var boardGroupsStr = button.getAttribute('data-board-groups'); // Should be a comma-separated string of group IDs
+      console.log("Raw board groups:", boardGroupsStr);
+      var boardGroups = boardGroupsStr ? boardGroupsStr.split(',') : [];
+      console.log("Parsed board groups:", boardGroups);
+      shareBoardModal.querySelector('#shareBoardId').value = boardId;
+      var checkboxes = shareBoardModal.querySelectorAll('.group-checkbox');
+      checkboxes.forEach(function(checkbox) {
+        checkbox.checked = boardGroups.includes(String(checkbox.value));
+      });
+    });
   </script>
 {% endblock %}

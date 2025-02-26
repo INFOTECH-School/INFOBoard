@@ -28,14 +28,10 @@
         <hr class="sidebar-divider my-0">
         <ul class="navbar-nav text-light" id="accordionSidebar">
           <li class="nav-item">
+          {% if request.user.is_creator or request.user.is_superuser or request.user.is_staff %}
             <a class="nav-link {% if request.resolver_match.url_name == 'my' %}active{% endif %}" href="{% url 'my' %}" style="font-size: 0.9rem;">
               <i class="far fa-list-alt"></i>
               <span>Moje Tablice</span>
-            </a>
-            <hr>
-            <a class="nav-link {% if request.resolver_match.url_name == 'shared' %}active{% endif %}" href="{% url 'shared' %}" style="font-size: 0.9rem;">
-              <i class="far fa-share-square"></i>
-              <span>Wspólne Tablice</span>
             </a>
             <hr>
             <a class="nav-link {% if request.resolver_match.url_name == 'my_board_groups' %}active{% endif %}" href="{% url 'my_board_groups' %}" style="font-size: 0.9rem;">
@@ -43,8 +39,14 @@
               <span>Moje Grupy</span>
             </a>
             <hr>
+          {% endif %}
+            <a class="nav-link {% if request.resolver_match.url_name == 'shared' %}active{% endif %}" href="{% url 'shared' %}" style="font-size: 0.9rem;">
+              <i class="far fa-share-square"></i>
+              <span>Wspólne Tablice</span>
+            </a>
+            <hr>
             <a class="nav-link {% if request.resolver_match.url_name == 'shared_board_groups' %}active{% endif %}" href="{% url 'shared_board_groups' %}" style="font-size: 0.9rem;">
-              <i class="far fa-handshake"></i>
+              <i class="far fa-compass"></i>
               <span>Wspólne Grupy</span>
             </a>
             <hr>
@@ -60,6 +62,26 @@
               <i class="fas fa-bars"></i>
             </button>
             <ul class="navbar-nav flex-nowrap ms-auto">
+              {% if request.user.is_staff %}
+                <div class="nav-item">
+                  <a class="nav-link " href="{% url 'admin:index' %}">
+                    <i class="fas fa-cogs fa-sm fa-fw me-2 text-gray-400"></i>&nbsp;Admin
+                  </a>
+                </div>
+              {% endif %}
+              {% if request.user.is_creator %}
+                <div class="nav-item">
+                  <a class="nav-link text-gray-600" href="#">
+                    Nauczyciel
+                  </a>
+                </div>
+              {% else %}
+                <div class="nav-item">
+                  <a class="nav-link text-gray-600" href="#">
+                    Uczeń
+                  </a>
+                </div>
+              {% endif %}
               <div class="d-none d-sm-block topbar-divider"></div>
               <li class="nav-item dropdown no-arrow">
                 <div class="nav-item dropdown no-arrow">
@@ -67,7 +89,11 @@
                     <span class="d-none d-lg-inline me-2 text-gray-600 small">
                       Hej! <b>{{ request.user.first_name }} {{ request.user.last_name }}</b>
                     </span>
-                    <img class="border rounded-circle img-profile" src="{% static 'assets/img/avatars/avatar1.jpeg' %}">
+                    {% if request.user.profile_image and request.user.profile_image.url != '/media/profile_images/default.png' %}
+                      <img src="{{ request.user.profile_image.url }}" alt="Profile Image" class="border rounded-circle img-profile">
+                    {% else %}
+                      <img src="https://placebeard.it/250/250" alt="Default Profile Image" class="border rounded-circle img-profile">
+                    {% endif %}
                   </a>
                   <div class="dropdown-menu shadow dropdown-menu-end animated--grow-in">
                     <a class="dropdown-item" href="{% url 'admin:logout' %}">

@@ -22,7 +22,28 @@
                 </button>
                 <div class="dropdown-menu shadow dropdown-menu-end animated--fade-in">
                   <p class="text-center dropdown-header">Akcje</p>
-                  <a class="dropdown-item disabled" href="#">Zmień nazwę</a>
+                  <a class="dropdown-item update-group-btn" href="#"
+                     data-group-id="{{ group.group_id }}"
+                     data-group-name="{{ group.class_name }}"
+                     data-group-year="{{ group.class_year }}"
+                     data-group-category="{{ group.category }}"
+                     data-bs-toggle="modal"
+                     data-bs-target="#updateGroupModal">
+                    Zmień dane
+                  </a>
+                  <a class="dropdown-item manage-group-boards-btn" href="#"
+                     data-group-id="{{ group.group_id }}"
+                     data-group-boards="{{ group.board_ids }}"
+                     data-bs-toggle="modal"
+                     data-bs-target="#manageGroupBoardsModal">
+                     Zarządzaj tablicami
+                  </a>
+                  <a class="dropdown-item manage-group-users-btn" href="#"
+                     data-group-id="{{ group.group_id }}"
+                     data-bs-toggle="modal"
+                     data-bs-target="#manageGroupUsersModal">
+                    Zarządzaj użytkownikami
+                  </a>
                   <div class="dropdown-divider"></div>
                   <a class="dropdown-item delete-group-btn" href="#"
                      data-group-id="{{ group.group_id }}"
@@ -144,12 +165,12 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="showCodeModalLabel">Kod dołączeniowy</h5>
+        <h5 class="modal-title" id="showCodeModalLabel">Kod tablicy</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
       </div>
       <div class="modal-body">
         <div class="mb-3">
-          <label for="joinCodeInput" class="form-label">Twój kod dołączeniowy:</label>
+          <label for="joinCodeInput" class="form-label">Twój kod tablicy:</label>
           <input type="text" class="form-control" id="joinCodeInput" readonly value="">
         </div>
       </div>
@@ -160,6 +181,114 @@
     </div>
   </div>
 </div>
+  <!-- Modal: Update Group Details -->
+<div class="modal fade" id="updateGroupModal" tabindex="-1" aria-labelledby="updateGroupModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="updateGroupModalLabel">Zmień dane grupy</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+      </div>
+      <form method="POST" action="{% url 'my_board_groups' %}">
+        {% csrf_token %}
+        <!-- Hidden field to simulate PUT request -->
+        <input type="hidden" name="_method" value="PUT">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="groupNameInput" class="form-label">Nazwa grupy</label>
+            <input type="text" class="form-control" id="groupNameInput" name="class_name" placeholder="Wprowadź nazwę grupy" required>
+          </div>
+          <div class="mb-3">
+            <label for="groupYearInput" class="form-label">Rok klasy</label>
+            <input type="number" class="form-control" id="groupYearInput" name="class_year" placeholder="Wprowadź rok klasy" required>
+          </div>
+          <div class="mb-3">
+            <label for="groupCategorySelect" class="form-label">Kategoria</label>
+            <select class="form-select" id="groupCategorySelect" name="category" required>
+              <option value="podstawowa">podstawowa</option>
+              <option value="średnio-zaawansowana">średnio-zaawansowana</option>
+              <option value="zaawansowana">zaawansowana</option>
+            </select>
+          </div>
+          <!-- Hidden input for group ID -->
+          <input type="hidden" name="group_id" id="updateGroupId" value="">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+  <!-- Modal: Manage Boards in Group -->
+<div class="modal fade" id="manageGroupBoardsModal" tabindex="-1" aria-labelledby="manageGroupBoardsModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'manage_group_boards' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="manageGroupBoardsModalLabel">Zarządzaj tablicami w grupie</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Hidden input for group id -->
+          <input type="hidden" name="group_id" id="manageGroupId" value="">
+
+          <p>Wybierz tablice, które chcesz przypisać do grupy:</p>
+          <div class="mb-3">
+            {% for board in boards %}
+              <div class="form-check">
+                <input class="form-check-input board-checkbox" type="checkbox" name="boards" id="boardCheckbox{{ board.room_name }}" value="{{ board.room_name }}">
+                <label class="form-check-label" for="boardCheckbox{{ board.room_name }}">
+                  {{ board.user_room_name }}
+                </label>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+  <!-- Modal: Manage Users in Group -->
+<div class="modal fade" id="manageGroupUsersModal" tabindex="-1" aria-labelledby="manageGroupUsersModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'manage_group_users' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="manageGroupUsersModalLabel">Zarządzaj użytkownikami w grupie</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Hidden input for group id -->
+          <input type="hidden" name="group_id" id="manageGroupId" value="">
+
+          <p>Wybierz użytkowników, których chcesz usunąć z grupy:</p>
+
+          <!-- Message when no users are present -->
+          <p id="noUsersMessage" style="display: none;" class="text-danger">Brak użytkowników w tej grupie.</p>
+
+          <!-- Users List -->
+          <div class="mb-3" id="groupUsersList">
+            <!-- Users will be dynamically injected here -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <!-- Remove button, initially hidden when there are no users -->
+          <button type="submit" class="btn btn-danger" style="display: none;">Usuń użytkowników</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 {% block extra_script %}
 <!-- JavaScript to dynamically populate the modal -->
@@ -202,6 +331,92 @@
     }, function(err) {
       console.error('Błąd przy kopiowaniu: ', err);
     });
+  });
+</script>
+  <!-- JavaScript to dynamically populate the modal -->
+<script>
+  var updateGroupModal = document.getElementById('updateGroupModal');
+  updateGroupModal.addEventListener('show.bs.modal', function (event) {
+    // Button that triggered the modal
+    var button = event.relatedTarget;
+    // Extract group data from data attributes
+    var groupId = button.getAttribute('data-group-id');
+    var groupName = button.getAttribute('data-group-name');
+    var groupYear = button.getAttribute('data-group-year');
+    var groupCategory = button.getAttribute('data-group-category');
+    // Set the values in the modal form
+    updateGroupModal.querySelector('#groupNameInput').value = groupName;
+    updateGroupModal.querySelector('#groupYearInput').value = groupYear;
+    updateGroupModal.querySelector('#groupCategorySelect').value = groupCategory;
+    updateGroupModal.querySelector('#updateGroupId').value = groupId;
+  });
+</script>
+  <script>
+  var manageGroupBoardsModal = document.getElementById('manageGroupBoardsModal');
+  manageGroupBoardsModal.addEventListener('show.bs.modal', function (event) {
+    var button = event.relatedTarget;
+    var groupId = button.getAttribute('data-group-id');
+    var groupBoardsStr = button.getAttribute('data-group-boards'); // Comma-separated list of board IDs
+    console.log("Raw group boards:", groupBoardsStr);
+    var groupBoards = groupBoardsStr ? groupBoardsStr.split(',') : [];
+    console.log("Parsed group boards:", groupBoards);
+
+    // Set the group ID in the hidden input field in the modal
+    manageGroupBoardsModal.querySelector('#manageGroupId').value = groupId;
+
+    // Loop through each checkbox and pre-check the ones that correspond to the selected boards
+    var checkboxes = manageGroupBoardsModal.querySelectorAll('.board-checkbox');
+    checkboxes.forEach(function(checkbox) {
+      checkbox.checked = groupBoards.includes(String(checkbox.value));  // Check if the checkbox's value (board ID) is in the groupBoards array
+    });
+  });
+</script>
+  <script>
+  var manageGroupUsersModal = document.getElementById('manageGroupUsersModal');
+  manageGroupUsersModal.addEventListener('show.bs.modal', function (event) {
+    var button = event.relatedTarget;
+    var groupId = button.getAttribute('data-group-id');
+
+    // Set the group ID in the hidden input field in the modal
+    manageGroupUsersModal.querySelector('#manageGroupId').value = groupId;
+
+    // Fetch the users of the group using AJAX (or pass them via context if preferred)
+    fetch(`/get-group-users/${groupId}/`)
+      .then(response => response.json())
+      .then(data => {
+        var usersList = document.getElementById('groupUsersList');
+        var removeButton = manageGroupUsersModal.querySelector('button[type="submit"]');
+        var noUsersMessage = manageGroupUsersModal.querySelector('#noUsersMessage');
+
+        // Clear the existing list
+        usersList.innerHTML = '';
+
+        if (data.users.length === 0) {
+          // If no users, show a message and hide the submit button
+          removeButton.style.display = 'none';  // Hide the "Usuń użytkowników" button
+          noUsersMessage.style.display = 'block';  // Show the "No users" message
+        } else {
+          // If users exist, hide the "No users" message and show the submit button
+          removeButton.style.display = 'block';  // Show the "Usuń użytkowników" button
+          noUsersMessage.style.display = 'none';  // Hide the "No users" message
+
+          // Dynamically create checkboxes for each user in the group
+          data.users.forEach(user => {
+            var checkbox = document.createElement('div');
+            checkbox.classList.add('form-check');
+            checkbox.innerHTML = `
+              <input class="form-check-input user-checkbox" type="checkbox" name="users" id="userCheckbox${user.id}" value="${user.id}">
+              <label class="form-check-label" for="userCheckbox${user.id}">
+                ${user.full_name} (${user.username})
+              </label>
+            `;
+            usersList.appendChild(checkbox);
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching group users:', error);
+      });
   });
 </script>
 {% endblock %}

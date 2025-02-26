@@ -8,8 +8,29 @@ from django.utils.translation import gettext_lazy as _
 
 from . import models as m
 
-admin.site.register(m.CustomUser, UserAdmin)
 admin.site.unregister(Group)
+
+@admin.register(m.CustomUser)
+class CustomUserAdmin(UserAdmin):
+    fieldsets = (
+        (None, {"fields": ("username", "password")}),
+        (_("Personal info"), {"fields": ("first_name", "last_name", "email")}),
+        (
+            _("Permissions"),
+            {
+                "fields": (
+                    "is_active",
+                    'is_creator',
+                    "is_staff",
+                    "is_superuser",
+                ),
+            },
+        ),
+        (_("Important dates"), {"fields": ("last_login", "date_joined")}),
+    )
+    list_display = UserAdmin.list_display + ('is_creator',)
+    list_filter = UserAdmin.list_filter + ('is_creator',)
+
 
 @admin.register(m.ExcalidrawLogRecord)
 class ExcalidrawLogRecordAdmin(admin.ModelAdmin):

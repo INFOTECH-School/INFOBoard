@@ -32,6 +32,8 @@ class CustomUser(AbstractUser):
     This enables us to alias user for better privacy.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    is_creator = models.BooleanField(default=False, verbose_name=_("Twórca"), help_text="Użytkownik, który utworzył pokój")
+    profile_image = models.ImageField(upload_to='profile_images', default='profile_images/default.png', verbose_name=_("Zdjęcie profilowe"))
 
 
 class ExcalidrawLogRecordManager(models.Manager):

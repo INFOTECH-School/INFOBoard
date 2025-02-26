@@ -3,20 +3,23 @@ from datetime import datetime
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
 from django.db.models import Q, Count
+from django.http import JsonResponse
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 
-from collab.models import ExcalidrawRoom, BoardGroups
+from collab.models import ExcalidrawRoom, BoardGroups, CustomUser
 from collab.utils import get_or_create_room
 from draw.utils import validate_room_name
+from draw.utils.auth import require_group_owner, is_creator_or_in_staff, owner_required
 
 
 def login(request):
+    if request.user.is_authenticated:
+        return redirect(reverse('my'))
     # Pobierz parametr 'next' z GET; jeśli jest pusty, użyj domyślnego URL-a.
     next_url = request.GET.get('next')
     if not next_url:
@@ -38,17 +41,19 @@ def login(request):
 def redirect_to_my(request):
     return redirect('my')
 
-@method_decorator(login_required, name='dispatch')
+@method_decorator(is_creator_or_in_staff, name='dispatch')
 class MyBoardView(View):
     template_name = 'my_whiteboards.html'
 
     def get(self, request):
         tables = ExcalidrawRoom.objects.filter(room_created_by=request.user).all()
-        year = datetime.now().year
-        return render(request, self.template_name, {'tables': tables})
+        # Annotate each board with the comma-separated list of group IDs that contain the board.
+        for board in tables:
+            board.group_ids = ",".join(str(group.group_id) for group in board.boards.all())
+        groups = BoardGroups.objects.filter(owner=request.user).all()
+        return render(request, self.template_name, {'tables': tables, 'groups': groups})
 
     def post(self, request):
-
         if request.POST.get('_method') == 'DELETE':
             return self.delete(request)
 
@@ -60,20 +65,13 @@ class MyBoardView(View):
             messages.error(request, _("Nie podano nazwy tablicy."))
             return redirect('my')
 
-        try:
-            # Próba walidacji; jeśli nazwa jest niepoprawna, zostanie rzucony ValidationError
-            validate_room_name(room_name)
-        except ValidationError:
-            messages.add_message(request, 30, _("Nieprawidłowa nazwa tablicy!"), 'danger')
-            return redirect('my')
-
-        # Próba utworzenia pokoju; jeśli już istnieje, get_or_create zwróci created=False
+        # Create the board; get_or_create returns a tuple (instance, created)
         __, created = ExcalidrawRoom.objects.get_or_create(
             user_room_name=room_name,
             room_created_by=request.user
         )
         if not created:
-            messages.add_message(request, 30, _("Nazwa tablicy została już użyta!") % {'room_name': room_name})
+            messages.error(request, _("Nazwa tablicy została już użyta!"))
         else:
             messages.success(request, _('Pomyślnie utworzono tablicę!'))
         return redirect('my')
@@ -87,7 +85,7 @@ class MyBoardView(View):
         try:
             room = ExcalidrawRoom.objects.get(room_name=room_name, room_created_by=request.user)
         except ExcalidrawRoom.DoesNotExist:
-            messages.add_message(request, 35, _("Nie znaleziono tablicy o podanej nazwie."), 'danger')
+            messages.error(request, _("Nie znaleziono tablicy o podanej nazwie."))
             return redirect('my')
 
         room.delete()
@@ -105,40 +103,45 @@ class MyBoardView(View):
         try:
             room = ExcalidrawRoom.objects.get(room_name=room_name, room_created_by=request.user)
         except ExcalidrawRoom.DoesNotExist:
-            messages.add_message(request, 35, _("Nie znaleziono tablicy o podanej nazwie."), 'danger')
-            return redirect('my')
-
-        try:
-            validate_room_name(new_room_name)
-        except ValidationError:
-            messages.add_message(request, 30, _("Nieprawidłowa nazwa tablicy!"), 'danger')
+            messages.error(request, _("Nie znaleziono tablicy o podanej nazwie."))
             return redirect('my')
 
         room.user_room_name = new_room_name
         room.save()
         messages.success(request, _("Pomyślnie zmieniono nazwę tablicy!"))
-
         return redirect('my')
 
-
-
+@login_required
 def shared_board(request):
-    accessible_boards = ExcalidrawRoom.objects.filter(Q(boards__users=request.user)).distinct().prefetch_related('boards')
+    accessible_boards = ExcalidrawRoom.objects.filter(Q(boards__users=request.user)).distinct().prefetch_related('boards').order_by('last_update')
     return render(request, 'shered_whiteboards.html', {'tables': accessible_boards})
 
 
-@method_decorator(login_required, name='dispatch')
+@method_decorator(is_creator_or_in_staff, name='dispatch')
 class MyBoardGroup(View):
     template_name = 'boards_group.html'
 
     def get(self, request):
+        # Get all groups owned by the user and annotate with the count of boards
         groups = BoardGroups.objects.filter(owner=request.user).annotate(board_count=Count('boards')).all()
-        return render(request, self.template_name, {'groups': groups})
+
+        # Annotate each group with the comma-separated list of board IDs (for modal checkbox checking)
+        for group in groups:
+            group.board_ids = ",".join(str(board.room_name) for board in group.boards.all())
+
+        # Get all boards created by the user
+        boards = ExcalidrawRoom.objects.filter(room_created_by=request.user).all()
+
+        return render(request, self.template_name, {'groups': groups, 'boards': boards})
+
 
     def post(self, request):
 
         if request.POST.get('_method') == 'DELETE':
             return self.delete(request)
+
+        if request.POST.get('_method') == 'PUT':
+            return self.put(request)
 
         class_name = request.POST.get('class_name')
         if not class_name:
@@ -165,6 +168,7 @@ class MyBoardGroup(View):
         messages.success(request, _("Pomyślnie utworzono grupę!"))
         return redirect('my_board_groups')
 
+    @method_decorator(require_group_owner)
     def delete(self, request):
         group_id = request.POST.get('group_id')
         if not group_id:
@@ -181,42 +185,166 @@ class MyBoardGroup(View):
         messages.success(request, _("Pomyślnie usunięto grupę!"))
         return redirect('my_board_groups')
 
+    @method_decorator(require_group_owner)
+    def put(self, request):
+        group_id = request.POST.get('group_id')
+        new_class_name = request.POST.get('class_name')
+        new_class_year = request.POST.get('class_year')
+        new_category = request.POST.get('category')
 
+        if not group_id or not new_class_name or not new_class_year or not new_category:
+            messages.error(request, 35, _("Nie podano wszystkich danych."), 'danger')
+            return redirect('my_board_groups')
+
+        try:
+            group = BoardGroups.objects.get(group_id=group_id, owner=request.user)
+        except BoardGroups.DoesNotExist:
+            messages.add_message(request, 35, _("Nie znaleziono grupy o podanym ID."), 'danger')
+            return redirect('my_board_groups')
+
+        group.class_name = new_class_name
+        group.class_year = new_class_year
+        group.category = new_category
+        group.save()
+
+        messages.success(request, _("Pomyślnie zmieniono dane grupy!"))
+        return redirect('my_board_groups')
+
+@method_decorator(login_required, name='dispatch')
 class SharedBoardGroup(View):
     template_name = 'shared_boards_group.html'
 
     def get(self, request):
-        groups = BoardGroups.objects.filter(users=request.user).all()
+        groups = BoardGroups.objects.filter(users=request.user).annotate(board_count=Count('boards')).all()
         return render(request, self.template_name, {'groups': groups})
 
     def post(self, request):
-        group_id = request.POST.get('group_id')
-        if not group_id:
-            messages.error(request, _("Nie podano ID grupy."))
+
+        _method = request.POST.get('_method', '').upper()
+        if _method == 'LEAVE':
+            return self.leave(request)
+
+        # Process join group form submission
+        join_code = request.POST.get('join_code')
+        if not join_code:
+            messages.error(request, 35, _("Nie podano kodu dołączeniowego."), 'danger')
             return redirect('shared_board_groups')
 
-        try:
-            group = BoardGroups.objects.get(id=group_id, users=request.user)
-        except BoardGroups.DoesNotExist:
-            messages.add_message(request, 35, _("Nie znaleziono grupy o podanym ID."), 'danger')
+        group = BoardGroups.objects.filter(code=join_code).first()
+        if not group:
+            messages.add_message(request, 35, _("Nie znaleziono grupy o podanym kodzie."), 'danger')
+            return redirect('shared_board_groups')
+
+        # Prevent the owner from joining their own group
+        if group.owner == request.user:
+            messages.add_message(request, 35, _("Nie możesz dołączyć do własnej grupy."), 'danger')
             return redirect('shared_board_groups')
 
         group.users.add(request.user)
         messages.success(request, _("Pomyślnie dołączono do grupy!"))
         return redirect('shared_board_groups')
 
-    def delete(self, request):
+    def leave(self, request):
         group_id = request.POST.get('group_id')
         if not group_id:
-            messages.error(request, _("Nie podano ID grupy."))
+            messages.add_message(request, 35, _("Nie podano ID grupy."), 'danger')
             return redirect('shared_board_groups')
 
-        try:
-            group = BoardGroups.objects.get(id=group_id, users=request.user)
-        except BoardGroups.DoesNotExist:
+        group = BoardGroups.objects.filter(group_id=group_id).first()
+        if not group:
             messages.add_message(request, 35, _("Nie znaleziono grupy o podanym ID."), 'danger')
+            return redirect('shared_board_groups')
+        # Ensure the owner cannot leave their own group
+        if group.owner == request.user:
+            messages.add_message(request, 35, _("Nie możesz wypisać się z własnej grupy."), 'danger')
             return redirect('shared_board_groups')
 
         group.users.remove(request.user)
-        messages.success(request, _("Pomyślnie opuszczono grupę!"))
+        messages.success(request, _("Pomyślnie wypisano się z grupy!"))
         return redirect('shared_board_groups')
+
+
+@is_creator_or_in_staff
+def share_board(request):
+    if request.method == 'POST':
+        board_id = request.POST.get('board_id')
+        if not board_id:
+            messages.error(request, _("Nie podano identyfikatora tablicy."))
+            return redirect('my')
+
+        # Get the board; ensure the current user has permission (e.g. is the owner)
+        board = get_object_or_404(ExcalidrawRoom, room_name=board_id, room_created_by=request.user)
+
+        # Get the list of selected group IDs from checkboxes; returns an empty list if none are selected.
+        selected_group_ids = request.POST.getlist('groups')
+
+        # Retrieve the corresponding BoardGroups objects owned by the current user.
+        groups = BoardGroups.objects.filter(group_id__in=selected_group_ids, owner=request.user)
+
+        # Update the many-to-many relation: set board.boards to exactly these groups.
+        board.boards.set(groups)
+
+        messages.success(request, _("Udostępnianie tablicy zostało zaktualizowane."))
+        return redirect('my')
+    else:
+        messages.error(request, _("Nieprawidłowa metoda żądania."))
+        return redirect('my')
+
+@is_creator_or_in_staff
+@require_group_owner
+def manage_group_boards(request):
+    if request.method == 'POST':
+        group_id = request.POST.get('group_id')
+        if not group_id:
+            messages.error(request, _("Nie podano ID grupy."))
+            return redirect('my_board_groups')
+
+        group = get_object_or_404(BoardGroups, group_id=group_id, owner=request.user)
+        selected_board_ids = request.POST.getlist('boards')
+        boards = ExcalidrawRoom.objects.filter(room_created_by=request.user, room_name__in=selected_board_ids)
+        group.boards.set(boards)  # Update the many-to-many relationship
+        messages.success(request, _("Zaktualizowano tablice w grupie."))
+        return redirect('my_board_groups')
+    else:
+        messages.error(request, _("Nieprawidłowa metoda żądania."))
+        return redirect('my_board_groups')
+
+@is_creator_or_in_staff
+@require_group_owner
+def get_group_users(request, group_id):
+    group = get_object_or_404(BoardGroups, group_id=group_id, owner=request.user)
+    users = group.users.all()
+
+    user_data = [
+        {
+            'id': user.id,
+            'full_name': user.get_full_name(),
+            'username': user.username
+        }
+        for user in users
+    ]
+
+    return JsonResponse({'users': user_data})
+
+@is_creator_or_in_staff
+@require_group_owner
+def manage_group_users(request):
+    if request.method == 'POST':
+        group_id = request.POST.get('group_id')
+        user_ids_to_remove = request.POST.getlist('users')  # List of user IDs to remove
+
+        if not group_id:
+            messages.error(request, _("Nie podano ID grupy."))
+            return redirect('my_board_groups')
+
+        group = get_object_or_404(BoardGroups, group_id=group_id, owner=request.user)
+
+        # Remove selected users from the group
+        users_to_remove = CustomUser.objects.filter(id__in=user_ids_to_remove)
+        group.users.remove(*users_to_remove)  # Remove the users from the group
+
+        messages.success(request, _("Użytkownicy zostali usunięci z grupy."))
+        return redirect('my_board_groups')
+    else:
+        messages.error(request, _("Nieprawidłowa metoda żądania."))
+        return redirect('my_board_groups')

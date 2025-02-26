@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Union
 
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.log import DEFAULT_LOGGING
+from os import environ as env
 
 from draw.utils import StrLike, TrustedOrigins, deepmerge
 
@@ -47,7 +48,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'channels',
     'collab',
-    'dash'
+    'dash',
+    'social_django',
 ]
 
 MIDDLEWARE = [
@@ -225,9 +227,35 @@ def finalize_settings(final_locals: Dict[str, Any]):
         raise ImproperlyConfigured(
             f'The following mandatory keys are missing from your config: {missing}')
 
-SOFT_VERSION = '0.7.5'
+SOFT_VERSION = '0.9.0'
 NOW_YEAR = datetime.datetime.now().year
 
 LOGIN_URL = 'custom_login'
 LOGIN_REDIRECT_URL = '/my'
 LOGOUT_REDIRECT_URL = 'custom_login'
+
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.google.GoogleOAuth2',  # for Google OAuth2
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env.get("HC_GOOGLE_OAUTH2_KEY")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = env.get("HC_GOOGLE_OAUTH2_SECRET")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['email', 'profile']
+SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = ['first_name', 'last_name']
+
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.social_user',
+    'social_core.pipeline.user.get_username',
+    'social_core.pipeline.social_auth.associate_by_email',
+    'social_core.pipeline.user.create_user',
+    'collab.pipeline.update_profile_picture',
+    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.load_extra_data',
+    'social_core.pipeline.user.user_details',
+)
+
+
+SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/my'

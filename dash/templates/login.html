@@ -41,7 +41,7 @@
                                         <div class="mb-3">
                                             <div class="custom-checkbox small"></div>
                                         </div><button class="btn btn-primary d-block btn-user w-100" type="submit">Zaloguj się!</button>
-                                        <hr><a class="btn btn-primary d-block btn-google btn-user w-100 mb-2" role="button"><i class="fab fa-google"></i>&nbsp; Zaloguj się z Google</a>
+                                        <hr><a class="btn btn-primary d-block btn-google btn-user w-100 mb-2" role="button" href="{% url 'social:begin' 'google-oauth2' %}?next={{ request.path }}"><i class="fab fa-google"></i>&nbsp; Zaloguj się z Google</a>
                                     </form>
                                 </div>
                             </div>

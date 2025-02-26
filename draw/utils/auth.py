@@ -6,7 +6,7 @@ from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
 from django.contrib.sessions.backends.base import SessionBase
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
 
@@ -168,7 +168,57 @@ def owner_required(view_func):
         is_owner = await sync_to_async(lambda: room_obj.room_created_by == request.user)()
         if not is_owner and not request.user.is_staff:
             messages.add_message(request, 30, _("Nie jesteś właścicielem tej tablicy!"), 'danger')
-            return redirect('my')
+            return redirect('shared_board_groups')
 
         return await view_func(request, room_name, *args, **kwargs)
+    return _wrapped_view
+
+
+def is_creator_or_in_staff(view_func):
+    """
+    Decorator that ensures the user is either a creator (is_creator) or a staff member (is_staff).
+    """
+
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        # Check if the user is authenticated
+        if not request.user.is_authenticated:
+            messages.add_message(request, 30, _("Użytkownik musi być zalogowany."), 'danger')
+            return redirect('custom_login')
+
+        # Check if the user is in the staff or is the creator
+        user = request.user
+        if not (user.is_creator or user.is_staff):
+            messages.add_message(request, 30, _("You don't have permission to access this board."), 'danger')
+            return redirect('shared_board_groups')
+
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped_view
+
+
+def require_group_owner(view_func):
+    """
+    Decorator to ensure the user is the owner of the group before allowing changes.
+    """
+
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        # Get the group_id from URL parameters or POST data
+        group_id = kwargs.get('group_id') or request.POST.get('group_id')
+        if not group_id:
+            messages.add_message(request, 30, _("Nie podano ID grupy."), 'danger')
+            return redirect('shared_board_groups')
+
+        # Get the group object, making sure it exists and belongs to the current user
+        group = get_object_or_404(BoardGroups, group_id=group_id)
+
+        if group.owner != request.user:
+            # If the user is not the owner, return a Forbidden response
+            messages.add_message(request, 30, _("Nie masz uprawnień do zarządzania tą grupą."), 'danger')
+            return redirect('shared_board_groups')
+
+        # If the user is the owner, proceed with the view
+        return view_func(request, *args, **kwargs)
+
     return _wrapped_view
