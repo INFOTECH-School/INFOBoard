@@ -1,3 +1,4 @@
+# --------------------- Client Build Stage ---------------------
 FROM node:lts AS client_builder
 
 WORKDIR /srv
@@ -12,9 +13,7 @@ RUN groupadd -r builder \
     && useradd --no-log-init -r -m -g builder builder \
     && chown builder:builder /srv
 
-COPY --chown=builder:builder \
-    ./client/package.json ./client/pnpm-lock.yaml \
-    ./
+COPY --chown=builder:builder ./client/package.json ./client/pnpm-lock.yaml ./
 
 USER builder
 
@@ -24,16 +23,14 @@ COPY ./client/ ./
 
 RUN pnpm run build
 
-# ------------------------------------------------------------------------------------------------ #
-
+# --------------------- Wheel Build Stage ---------------------
 FROM python:3.10-slim AS wheel_builder
 
 WORKDIR /opt
 
 RUN apt update \
     && apt upgrade -y \
-    && apt install -y --no-install-recommends \
-    gcc libc-dev libmariadb-dev libpq-dev \
+    && apt install -y --no-install-recommends gcc libc-dev libmariadb-dev libpq-dev \
     && apt autoremove -y && apt autoclean && apt clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -49,13 +46,12 @@ RUN mkdir -p wheels
 RUN pip install --no-cache-dir -U pip setuptools wheel
 RUN pip wheel -r wheels.requirements.txt -w ./wheels/
 
-# ------------------------------------------------------------------------------------------------ #
-
+# --------------------- Final Stage ---------------------
 FROM python:3.10-slim AS ltiapp
 
 WORKDIR /srv
 
-# install dependencies
+# Install Python dependencies
 RUN pip install --no-cache-dir -U pip setuptools wheel
 
 RUN apt update \
@@ -72,15 +68,18 @@ COPY --from=wheel_builder /opt/wheels /opt/wheels
 COPY ./backends.requirements.txt .
 RUN pip install --no-cache-dir -r backends.requirements.txt --find-links /opt/wheels
 
-# make an unpriviledged user and allow the user to access the data folder
+# Create an unprivileged user and allow access to the data folder
 RUN groupadd -r ltiapp \
     && useradd --no-log-init -r -m -g ltiapp ltiapp \
     && mkdir data && chown -R ltiapp:ltiapp data
 
-# Dependencies have been installed. Only build the 2nd stage if necessary
-COPY --from=client_builder --chown=ltiapp:ltiapp \
-    /srv/dist/ /srv/client/dist/
+# Create media directory and set permissions so that the ltiapp user can write profile images
+RUN mkdir -p /srv/media/profile_images && chown -R ltiapp:ltiapp /srv/media
 
+# Copy client assets built from the previous stage
+COPY --from=client_builder --chown=ltiapp:ltiapp /srv/dist/ /srv/client/dist/
+
+# Copy the rest of the application code
 COPY --chown=ltiapp:ltiapp . .
 
 ENV DJANGO_SETTINGS_MODULE=draw.test_settings
