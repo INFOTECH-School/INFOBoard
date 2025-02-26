@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'collab',
     'dash',
     'social_django',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -60,6 +61,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 WS_MIDDLEWARE = [
@@ -157,10 +159,6 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/3.2/topics/auth/customizing/#auth-custom-user
 AUTH_USER_MODEL = 'collab.CustomUser'
 
-# https://docs.djangoproject.com/en/3.2/ref/settings/#csrf-trusted-origins
-
-CSRF_TRUSTED_ORIGINS = TrustedOrigins()
-
 # Internationalization
 # https://docs.djangoproject.com/en/3.2/topics/i18n/
 
@@ -257,5 +255,23 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.user.user_details',
 )
 
-
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/my'
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+# CORS
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "http://localhost:3000",
+    "http://127.0.0.1:8000",
+    'https://tablica.infotech.edu.pl',
+    'http://10.192.192.1',
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "http://localhost:3000",
+    "http://127.0.0.1:8000",
+    'https://tablica.infotech.edu.pl',
+    'http://10.192.192.1',
+]
