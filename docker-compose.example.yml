@@ -6,14 +6,14 @@ services:
     image: ghcr.io/infotech-school/infoboard:latest
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8000:8000"
+      - "8342:8342"
     volumes:
-      - ./data:/srv/data
-      - ./media:/srv/media
-      - ./static:/srv/static_copy
+      - data_infoboard:/srv/data
+      - media_infoboard:/srv/media
+      - static_infoboard:/srv/static_copy
       # use this if you want to create your own config file instead of using the environment vars
       # - ./deployment_settings.py:/srv/deployment_settings.py:ro
-    command: [ "draw.asgi", "--bind=0.0.0.0:8000", "--workers=4" ]
+    command: [ "draw.asgi", "--bind=0.0.0.0:8342", "--workers=4" ]
     environment:
       # use this if you want to create your own config file instead of using the environment vars
       # DJANGO_SETTINGS_MODULE: "deployment_settings"
@@ -21,67 +21,22 @@ services:
       # these three settings make this compose file compatible with hyperchalk.
       # TODO: change the mariadb password to your own!
       DJANGO_SETTINGS_MODULE: "draw.env_settings"
-      DATABASE_URL: "mysql://hyperchalk:CHANGE_THIS_PASSWORD@maria:3306/hyperchalk"
-      HC_REDIS_URL: "redis://redis:6379"
-
-      # the secret key is needed to encrypt cookies etc.
-      # You can get a good SECRET_KEY by executing the following command:
-      # < /dev/urandom tr -dc 'A-Za-z0-9!#$%&()*+,-./:;<=>?@[\]^_`{|}~' | head -c64; echo
-      # the result won't include the quote-characters so you can safely put the output string in quotes
-      # TODO: change this to your own SECRET_KEY
-      HC_SECRET_KEY: ""
-
-      # TODO: swap your.hostna.me for your own domain name.
-      HC_ALLOWED_HOSTS: "localhost,127.0.0.1,your.hostna.me"
-      HC_LINK_BASE: "your.hostna.me"
-
-      # the admin gets mailed in case something goes wrong
-      # TODO: enter your name/mail here
-      HC_ADMIN_NAME: "John Doe"
-      HC_ADMIN_MAIL: "jondoe@your.hostna.me"
-
-      # TODO: configure your time zone. get your time zone here:
-      # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-      HC_TIME_ZONE: CET
-
-      # TODO: if you want to receive admin mail, configure it here
-      # HC_EMAIL_HOST:
-      # HC_EMAIL_PORT: 465
-      # HC_EMAIL_HOST_USER:
-      # HC_EMAIL_HOST_PASSWORD:
-      # HC_EMAIL_USE_TLS: true
-      # HC_EMAIL_USE_SSL: false # mutually exclusive to EMAIL_USE_TLS
-      # HC_EMAIL_SUBJECT_PREFIX: "[Hyperchalk]"
-
-      # allow the creation of rooms when the user visits the index page
-      # without specifying a room in the URL. (default is false.)
-      HC_ALLOW_AUTOMATIC_ROOM_CREATION: "false"
-
-      # Allow users to create custom room when they visit the index page (default is false.)
-      HC_SHOW_CREATE_ROOM_PAGE: "false"
-
-      # Add a link to the imprint page at the bottom of the index page (default is None.)
-      # HC_IMPRINT_URL: ""
-
-      # If set to false (default), users will need to be logged in.
-      HC_ALLOW_ANONYMOUS_VISITS: "false"
-
-      # These rooms are accessible without any authentication or authorization. List of room names.
-      # comma-seperated list of room names, like this: "asdf,qwer,..."
-      HC_PUBLIC_ROOMS: ""
-
-      # Set if tracking is enabled or disabled by default. Defaults to "true".
-      # Tracking can be enabled or disabled individually for every room. Old rooms
-      # from before when this setting was available will have tracking enabled.
-      HC_ENABLE_TRACKING_BY_DEFAULT: "true"
-
-      # Should NEVER be true in production! Set to "true" for debug messages if you encounter an error.
-      HC_DEBUG: "false"
-
-      # set to true if you want to serve static files. we only recommend this if you want to try out
-      # Hyperchalk. For any serious installation, you shold serve the static files in
-      # BASE_DIR/static_copy and BASE_DIR/media using a real webserver like Nginx, Apache or Caddy.
-      HC_SERVE_FILES: "false"
+      HC_ADMIN_NAM: "admin name"
+      HC_ADMIN_MAIL: "admin email"
+      HC_ALLOW_AUTOMATIC_ROOM_CREATION: False
+      HC_SHOW_CREATE_ROOM_PAGE: False
+      HC_ALLOW_ANONYMOUS_VISITS: False
+      HC_PUBLIC_ROOMS: "[]"
+      HC_ENABLE_TRACKING_BY_DEFAULT: True
+      HC_DEBUG: True
+      HC_SERVE_FILES: True
+      HC_SECRET_KEY: "secret"
+      HC_ALLOWED_HOSTS: "*"
+      HC_LINK_BASE: "http://localhost:8342"
+      HC_TIME_ZONE: "Europe/Warsaw"
+      HC_LANGUAGE_CODE: "pl-PL"
+      HC_GOOGLE_OAUTH2_KEY: "token"
+      HC_GOOGLE_OAUTH2_SECRET: "token"
 
     depends_on:
       - maria
@@ -89,15 +44,24 @@ services:
 
   maria:
     image: mariadb:latest
-    # environment:
-    #   - MARIADB_DATABASE=hyperchalk
-    #   - MARIADB_USER=hyperchalk
-    #   - MARIADB_PASSWORD=CHANGE_THIS_PASSWORD
+    environment:
+      MARIADB_DATABASE: hyperchalk
+      MARIADB_ROOT_PASSWORD: CHANGE_THIS_PASSWORD
+      MARIADB_USER: hyperchalk
+
     volumes:
-      - './mariadb:/var/lib/mysql'
+      - db_infoboard:/var/lib/mysql
 
   redis:
     image: redis:alpine
     volumes:
-      - ./redis/data:/data
-      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis_infoboard_data:/data
+      - redis_infoboard_conf:/usr/local/etc/redis/redis.conf:ro
+
+volumes:
+  redis_infoboard_data:
+  redis_infoboard_conf:
+  media_infoboard:
+  static_infoboard:
+  db_infoboard:
+  data_infoboard:
