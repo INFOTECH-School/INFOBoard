@@ -275,3 +275,6 @@ CSRF_TRUSTED_ORIGINS = [
     'https://tablica.infotech.edu.pl',
     'http://10.192.192.1',
 ]
+
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True

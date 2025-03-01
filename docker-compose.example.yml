@@ -3,7 +3,9 @@ version: "3.9"
 services:
   # these are the recommended settings to run your app
   hyperchalk:
-    image: ghcr.io/infotech-school/infoboard:latest
+    build:
+        context: .
+        dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "8342:8342"
