@@ -225,7 +225,7 @@ def finalize_settings(final_locals: Dict[str, Any]):
         raise ImproperlyConfigured(
             f'The following mandatory keys are missing from your config: {missing}')
 
-SOFT_VERSION = '1.0.2-beta'
+SOFT_VERSION = '1.0.3-beta'
 NOW_YEAR = datetime.datetime.now().year
 
 LOGIN_URL = 'custom_login'
@@ -278,3 +278,5 @@ CSRF_TRUSTED_ORIGINS = [
 
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_AGE = 60 * 60 # 1h
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
