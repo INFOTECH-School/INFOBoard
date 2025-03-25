@@ -225,7 +225,7 @@ def finalize_settings(final_locals: Dict[str, Any]):
         raise ImproperlyConfigured(
             f'The following mandatory keys are missing from your config: {missing}')
 
-SOFT_VERSION = '1.0.5-beta'
+SOFT_VERSION = '1.0.6-beta'
 NOW_YEAR = datetime.datetime.now().year
 
 LOGIN_URL = 'custom_login'
