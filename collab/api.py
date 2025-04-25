@@ -24,7 +24,6 @@ async def get_file(request: HttpRequest, room_name: str, file_id: str):
         get_or_create_room(room_name=room_name),
         async_get_object_or_404(m.ExcalidrawFile, element_file_id=file_id, belongs_to=room_name))
     room_obj, __ = room_tuple
-    # await room_access_check(request, room_obj)
     return file_obj.to_excalidraw_file_schema()
 
 
