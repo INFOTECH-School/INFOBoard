@@ -6,7 +6,7 @@ from django.http import HttpRequest
 from ninja import Router
 
 from draw.utils import async_get_object_or_404
-from draw.utils.auth import require_staff_user, owner_required
+from draw.utils.auth import require_staff_user, owner_required, group_and_login_required
 
 from . import models as m
 from .types import ExcalidrawBinaryFile
@@ -18,13 +18,12 @@ collab_router = Router(tags=['collab'])
 @collab_router.get(
     '/{room_name}/file/{file_id}.json',
     response=ExcalidrawBinaryFile, url_name="get_file")
-@owner_required
+@group_and_login_required
 async def get_file(request: HttpRequest, room_name: str, file_id: str):
     room_tuple, file_obj = await gather(
         get_or_create_room(room_name=room_name),
         async_get_object_or_404(m.ExcalidrawFile, element_file_id=file_id, belongs_to=room_name))
     room_obj, __ = room_tuple
-    await room_access_check(request, room_obj)
     return file_obj.to_excalidraw_file_schema()
 
 
@@ -48,13 +47,13 @@ async def get_room(request: HttpRequest, room_name: str):
     return room_obj.elements
 
 
-@collab_router.get('/{room_name}/records.json',url_name="get_record_ids")
+@collab_router.get('/{room_name}/records.json', url_name="get_record_ids")
 @owner_required
 async def get_record_ids(request: HttpRequest, room_name: str):
     return await get_room_record_ids(room_name)
 
 
-@collab_router.get('/{room_name}/records/{pk}.json',url_name="get_record")
+@collab_router.get('/{room_name}/records/{pk}.json', url_name="get_record")
 @owner_required
 async def get_record(request: HttpRequest, room_name: str, pk: int):
     log_obj = await async_get_object_or_404(m.ExcalidrawLogRecord, pk=pk)

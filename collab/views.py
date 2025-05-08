@@ -51,6 +51,7 @@ def custom_messages():
         'FILE_TOO_LARGE': _("The file you've added is too large."),
     }
 
+
 @owner_required
 async def room(request: HttpRequest, room_name: str):
     room_obj, username = await asyncio.gather(
@@ -103,13 +104,14 @@ async def replay(request: HttpRequest, room_name: str, **kwargs):
         'files': await get_file_dicts(room_obj)
     })
 
+
 @group_and_login_required
 async def read_only(request: HttpRequest, room_name: str, **kwargs):
     room_obj = await async_get_object_or_404(m.ExcalidrawRoom, room_name=room_name)
     return render(request, 'collab/room.html', {
         'excalidraw_config': {
             'FILE_URL_TEMPLATE': absolute_reverse(request, 'api-1:put_file', kwargs={
-                'room_name': room_name, 'file_id': '{file_id}'}),
+                'room_name': room_name, 'file_id': 'FILE_ID'}),
             'IS_READONLY_MODE': True,
             'LANGUAGE_CODE': settings.LANGUAGE_CODE,
             'LIBRARY_RETURN_URL': absolute_reverse(request, 'collab:add-library'),
