@@ -2,6 +2,7 @@ import { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types"
 import {
   AppState,
   BinaryFiles,
+  BinaryFileData,
   Collaborator,
   ExcalidrawImperativeAPI,
 } from "@excalidraw/excalidraw/types/types"
@@ -11,7 +12,7 @@ import ReconnectingWebSocket from "reconnectingwebsocket"
 import { BroadcastedExcalidrawElement, ConfigProps, PointerUpdateProps } from "../types"
 import { EventEmitter, EventHandler, EventKey } from "../events"
 import { reconcileElements } from "../reconciliation"
-import { noop } from "../utils"
+import { apiRequestInit, noop } from "../utils"
 import { useEventEmitter } from "../hooks/useEventEmitter"
 
 // #region message types
@@ -28,7 +29,12 @@ export interface ElementsChangedMessage {
   elements: BroadcastedExcalidrawElement[]
 }
 
-export type CommunicatorMessage = CollaboratorChangeMessage | ElementsChangedMessage
+export interface FilesAddedMessage {
+  eventtype: "files_added"
+  fileids: string[]
+}
+
+export type CommunicatorMessage = CollaboratorChangeMessage | ElementsChangedMessage | FilesAddedMessage
 // #endregion message types
 
 export type ConnectionStates = "CONNECTED" | "DISCONNECTED"
@@ -49,6 +55,9 @@ export default class Communicator<TEventMap extends CommunicatorEventMap = Commu
 
   protected _excalidrawApiRef?: RefObject<ExcalidrawImperativeAPI>
   private _connectionState: ConnectionStates = "CONNECTED"
+
+  protected uploadedFileIds = new Set<string>()
+  protected uploadingFileIds = new Set<string>()
 
   // #region methods for excalidraw props
 
@@ -166,8 +175,79 @@ export default class Communicator<TEventMap extends CommunicatorEventMap = Commu
       case "full_sync":
         this.receiveElements(message.elements)
         return true
+      case "files_added":
+        this.receiveFiles(message.fileids)
+        return true
       default:
         return false
+    }
+  }
+
+  /**
+   * Get a url for a file to upload or download.
+   *
+   * @param fileId the files id
+   * @returns a url for the file with the given id
+   */
+  protected fileUrl(fileId: string) {
+    return this.config.FILE_URL_TEMPLATE!.replace("FILE_ID", fileId)
+  }
+
+  protected nextTryTimeout(nextTryExponentMinusOne: number) {
+    return Math.min(
+      this.config.UPLOAD_RETRY_TIMEOUT_MSEC * Math.pow(2, nextTryExponentMinusOne + 1),
+      this.config.MAX_RETRY_WAIT_MSEC
+    )
+  }
+
+  /**
+   * Update the set of broadcasted files.
+   *
+   * @param newlySyncedFiles files that just have been synced
+   */
+  protected updateUploadedFileIDs(newlySyncedFileIds: string[]) {
+    for (let index = 0; index < newlySyncedFileIds.length; index++) {
+      this.uploadedFileIds.add(newlySyncedFileIds[index])
+      this.uploadingFileIds.delete(newlySyncedFileIds[index])
+    }
+  }
+
+  /**
+   * Receive files via WebSocket.
+   *
+   * @param files files received over socket
+   */
+  private async receiveFiles(files: string[], nextTryExponentMinusOne = -1) {
+    // construct requests. only files that are yet unknown are to be downloaded
+    const fileRequests = files
+      .filter((id) => !this.uploadedFileIds.has(id))
+      .map((id) => fetch(this.fileUrl(id), apiRequestInit("GET")))
+
+    // prevent files from being re-uploaded after this function finishes
+    this.updateUploadedFileIDs(files)
+
+    // TODO: what to do if api is not loaded yet? does this ever happen?
+
+    // download the files and add them to the scene if the download succeeded.
+    // success is defined as:
+    // 1. the download promise settled
+    // 2. the return status was 200. maybe this has to change in the future.
+    const settledPromises = await Promise.allSettled(fileRequests)
+    const succeededBinaryFileData = settledPromises
+      .filter((p) => p.status == "fulfilled")
+      .map((p) => (p as PromiseFulfilledResult<Response>).value)
+      .filter((r) => r.status == 200)
+      .map((r) => r.json() as Promise<BinaryFileData>)
+    const downloadedFiles = await Promise.all(succeededBinaryFileData)
+    this.excalidrawApi?.addFiles(downloadedFiles)
+
+    // retry downloading failed IDs after a timeout elapsed
+    const downloadedFileIds = downloadedFiles.map((f) => f.id as string)
+    const downloadFailedIds = files.filter((id) => !downloadedFileIds.includes(id))
+    if (downloadFailedIds.length) {
+      setTimeout(() => {
+        this.receiveFiles(downloadFailedIds, nextTryExponentMinusOne + 1)
+      }, this.nextTryTimeout(nextTryExponentMinusOne))
     }
   }
 

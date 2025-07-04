@@ -2,7 +2,6 @@ import { isInvisiblySmallElement } from "@excalidraw/excalidraw"
 import { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types"
 import {
   AppState,
-  BinaryFileData,
   BinaryFiles,
   Collaborator,
 } from "@excalidraw/excalidraw/types/types"
@@ -18,17 +17,13 @@ import Communicator, {
   CollaboratorChangeMessage,
   CommunicatorMessage,
   ElementsChangedMessage,
+  FilesAddedMessage
 } from "./communicator"
 
 // #region message types
 interface CollaboratorLeftMessage {
   eventtype: "collaborator_left"
   collaborator: CollaboratorChange
-}
-
-interface FilesAddedMessage {
-  eventtype: "files_added"
-  fileids: string[]
 }
 
 interface FilesMissingMessage {
@@ -44,7 +39,6 @@ type CollaborationMessage =
   | CommunicatorMessage
   | CollaboratorLeftMessage
   | LoginRequired
-  | FilesAddedMessage
   | FilesMissingMessage
 // #endregion message types
 
@@ -112,9 +106,6 @@ export default class CollaborationCommunicator extends Communicator {
         case "login_required":
           this.endCollaboration()
           return true
-        case "files_added":
-          this.receiveFiles(message.fileids)
-          return true
         case "files_missing":
           this.sendFiles(message.missing.filter((id) => !this.uploadingFileIds.has(id)))
           return true
@@ -153,38 +144,6 @@ export default class CollaborationCommunicator extends Communicator {
     return toSync
   }
 
-  private uploadedFileIds = new Set<string>()
-  private uploadingFileIds = new Set<string>()
-
-  /**
-   * Get a url for a file to upload or download.
-   *
-   * @param fileId the files id
-   * @returns a url for the file with the given id
-   */
-  private fileUrl(fileId: string) {
-    return this.config.FILE_URL_TEMPLATE!.replace("FILE_ID", fileId)
-  }
-
-  private nextTryTimeout(nextTryExponentMinusOne: number) {
-    return Math.min(
-      this.config.UPLOAD_RETRY_TIMEOUT_MSEC * Math.pow(2, nextTryExponentMinusOne + 1),
-      this.config.MAX_RETRY_WAIT_MSEC
-    )
-  }
-
-  /**
-   * Update the set of broadcasted files.
-   *
-   * @param newlySyncedFiles files that just have been synced
-   */
-  private updateUploadedFileIDs(newlySyncedFileIds: string[]) {
-    for (let index = 0; index < newlySyncedFileIds.length; index++) {
-      this.uploadedFileIds.add(newlySyncedFileIds[index])
-      this.uploadingFileIds.delete(newlySyncedFileIds[index])
-    }
-  }
-
   /**
    * Update the set of files that are currently uploading.
    *
@@ -193,48 +152,6 @@ export default class CollaborationCommunicator extends Communicator {
   private startUploadingFileIDs(uploadingFileIds: string[]) {
     for (let index = 0; index < uploadingFileIds.length; index++) {
       this.uploadingFileIds.add(uploadingFileIds[index])
-    }
-  }
-
-  /**
-   * Receive files via WebSocket.
-   *
-   * This is not needed in {@link Communicator} because the
-   * other modes will have all files available from the start.
-   *
-   * @param files files received over socket
-   */
-  private async receiveFiles(files: string[], nextTryExponentMinusOne = -1) {
-    // construct requests. only files that are yet unknown are to be downloaded
-    const fileRequests = files
-      .filter((id) => !this.uploadedFileIds.has(id))
-      .map((id) => fetch(this.fileUrl(id), apiRequestInit("GET")))
-
-    // prevent files from being re-uploaded after this function finishes
-    this.updateUploadedFileIDs(files)
-
-    // TODO: what to do if api is not loaded yet? does this ever happen?
-
-    // download the files and add them to the scene if the download succeeded.
-    // success is defined as:
-    // 1. the download promise settled
-    // 2. the return status was 200. maybe this has to change in the future.
-    const settledPromises = await Promise.allSettled(fileRequests)
-    const succeededBinaryFileData = settledPromises
-      .filter((p) => p.status == "fulfilled")
-      .map((p) => (p as PromiseFulfilledResult<Response>).value)
-      .filter((r) => r.status == 200)
-      .map((r) => r.json() as Promise<BinaryFileData>)
-    const downloadedFiles = await Promise.all(succeededBinaryFileData)
-    this.excalidrawApi?.addFiles(downloadedFiles)
-
-    // retry downloading failed IDs after a timeout elapsed
-    const downloadedFileIds = downloadedFiles.map((f) => f.id as string)
-    const downloadFailedIds = files.filter((id) => !downloadedFileIds.includes(id))
-    if (downloadFailedIds.length) {
-      setTimeout(() => {
-        this.receiveFiles(downloadFailedIds, nextTryExponentMinusOne + 1)
-      }, this.nextTryTimeout(nextTryExponentMinusOne))
     }
   }
 
