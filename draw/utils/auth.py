@@ -121,6 +121,15 @@ def user_in_board_group(room_obj, user):
     return BoardGroups.objects.filter(boards=room_obj, users=user).exists()
 
 @sync_to_async
+def user_in_board_group_w_drawing_permissions(room_obj, user):
+    return BoardGroups.objects.filter(boards=room_obj, users=user, users_that_can_draw=user).exists()
+
+@sync_to_async
+def user_in_room_w_drawing_permissions(room_obj, user):
+    return user in room_obj.users_that_can_draw.all()
+
+
+@sync_to_async
 def check_is_owner(room_obj, user):
     return room_obj.room_created_by == user
 
@@ -166,8 +175,13 @@ def owner_required(view_func):
 
         # Sprawdzenie, czy użytkownik jest właścicielem tablicy
         is_owner = await sync_to_async(lambda: room_obj.room_created_by == request.user)()
-        if not is_owner and not request.user.is_staff:
-            messages.add_message(request, 30, _("Nie jesteś właścicielem tej tablicy!"), 'danger')
+
+        # Sprawdzenie, czy użytkownik może grzebać w tablicy :)
+        #can_user_draw = await user_in_board_group_w_drawing_permissions(room_obj, request.user)
+        can_user_draw = await user_in_room_w_drawing_permissions(room_obj, request.user)
+
+        if not is_owner and not request.user.is_staff and not can_user_draw:   #can_user_draw:
+            messages.add_message(request, 30, _("Nie jesteś upoważniony do edycji!"), 'danger')
             return redirect('shared_board_groups')
 
         return await view_func(request, room_name, *args, **kwargs)

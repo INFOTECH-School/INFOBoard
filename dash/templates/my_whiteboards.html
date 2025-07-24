@@ -36,6 +36,13 @@
                      data-bs-target="#renameBoardModal">
                     Zmień nazwę
                   </a>
+                   <a class="dropdown-item rename-board-btn" href="#"
+                     data-board-id="{{ board.room_name }}"
+                     data-board-name="{{ board.user_room_name }}"
+                     data-bs-toggle="modal"
+                     data-bs-target="#addWritingUsersBoardModal">
+                    Pozwól osobom rysować
+                  </a>
                   <div class="dropdown-divider"></div>
                   <a class="dropdown-item delete-board" href="#"
                      data-board-id="{{ board.room_name }}"
@@ -169,6 +176,50 @@
     </div>
   </div>
 
+  <!-- Modal: Dodanie użytkowników do edycji -->
+    <div class="modal fade" id="addWritingUsersBoardModal" tabindex="-1" aria-labelledby="addWritingUsersBoardModal" aria-hidden="true">
+     <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="shareUsersModalLabel">Wybierz osoby do udostępnienia</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+      </div>
+      <form id="beloved_users_form" method="POST" action="{% url 'my' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <!-- Hidden input for method -->
+          <input type="hidden" name="_method" value="PATCH">
+
+          <p>Wybierz osoby:</p>
+          <div class="mb-3">
+            {% for user in users %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="users" id="userCheckbox{{ user.id }}" value="{{ user.id }}">
+                <label class="form-check-label" for="userCheckbox{{ user.id }}">
+                  {{ user }}
+                </label>
+              </div>
+            {% endfor %}
+          {% for user in users_that_can_draw %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="users" id="userCheckbox{{ user.id }}" value="{{ user.id }}" checked>
+                <label class="form-check-label" for="userCheckbox{{ user.id }}">
+                  {{ user }}
+                </label>
+              </div>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="board_id" id="addWritingUsersBoardModalBoardId" value="">
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button id="beloved_users" type="submit" class="btn btn-primary">Wyślij</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  </div>
   <!-- Modal: Udostępnij tablicę grupom -->
   <div class="modal fade" id="shareBoardModal" tabindex="-1" aria-labelledby="shareBoardModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -245,5 +296,14 @@
         checkbox.checked = boardGroups.includes(String(checkbox.value));
       });
     });
+    // Modal: Add Writing Users to Board
+    var addWritingUsersModal = document.getElementById('addWritingUsersBoardModal');
+    addWritingUsersModal.addEventListener('show.bs.modal', function (event) {
+      var button  = event.relatedTarget;                            // przycisk, który otworzył modal
+      var boardId = button.getAttribute('data-board-id');           // pobierz board_id z data-attribute
+      var hiddenField = addWritingUsersModal.querySelector('#addWritingUsersBoardModalBoardId');
+      hiddenField.value = boardId;                                  // ustaw wartość w ukrytym polu
+    });
+
   </script>
 {% endblock %}

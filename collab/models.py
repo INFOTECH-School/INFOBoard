@@ -116,6 +116,7 @@ class ExcalidrawRoom(models.Model):
     tracking_enabled = models.BooleanField(_("track users' actions"), default=settings.ENABLE_TRACKING_BY_DEFAULT)
     _elements = models.BinaryField(blank=True, default=EMPTY_JSON_LIST_ZLIB_COMPRESSED)
     user_room_name = models.CharField(max_length=24, editable=True, null=False, blank=False, default=make_room_name(17))
+    users_that_can_draw = models.ManyToManyField(CustomUser, related_name='drawing_users_in_table', blank=True)
 
     @property
     def elements(self):
@@ -292,6 +293,7 @@ class BoardGroups(models.Model):
     category = models.CharField(max_length=50, choices=[('podstawowy', 'podstawowy'), ('średnio-zaawansowany', 'średnio-zaawansowany'), ('zaawansowany', 'zaawansowany')], default='podstawowa')
     owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='owner_group', default=None)
     users = models.ManyToManyField(CustomUser, related_name='users_group', blank=True)
+    users_that_can_draw = models.ManyToManyField(CustomUser, related_name='drawing_users_group', blank=True)
     boards = models.ManyToManyField(ExcalidrawRoom, related_name='boards', blank=True)
 
     def __str__(self):

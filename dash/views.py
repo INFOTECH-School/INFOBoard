@@ -51,7 +51,21 @@ class MyBoardView(View):
         for board in tables:
             board.group_ids = ",".join(str(group.group_id) for group in board.boards.all())
         groups = BoardGroups.objects.filter(owner=request.user).all()
-        return render(request, self.template_name, {'tables': tables, 'groups': groups})
+        users = [] #definitly should be done better, but for our use it's enough :)
+        users_w_permissions = []
+
+        for group in groups:
+            users+=group.users.all()
+
+        for table in tables:
+            users_w_permissions+=table.users_that_can_draw.all()
+
+        #This can be done better  ¯\_(ツ)_/¯
+        users = list(set(users))
+        users_w_permissions = list(set(users_w_permissions))
+        users_without_permission = [x for x in users if x not in users_w_permissions]
+        #trzeba zrobić coś żeby html wiedział kto już jest zaznaczony :))))
+        return render(request, self.template_name, {'tables': tables, 'groups': groups, 'users': list(set(users_without_permission)), 'users_that_can_draw': list(set(users_w_permissions))})
 
     def post(self, request):
         if request.POST.get('_method') == 'DELETE':
@@ -59,6 +73,9 @@ class MyBoardView(View):
 
         if request.POST.get('_method') == 'PUT':
             return self.put(request)
+
+        if request.POST.get('_method') == 'PATCH':
+            return self.patch(request)
 
         room_name = request.POST.get('room_name')
         if not room_name:
@@ -111,10 +128,38 @@ class MyBoardView(View):
         messages.success(request, _("Pomyślnie zmieniono nazwę tablicy!"))
         return redirect('my')
 
+    def patch(self, request):
+        try:
+            checked_users = CustomUser.objects.filter(pk__in=request.POST.getlist('users'))
+            board_id = request.POST.get('board_id')
+            board = get_object_or_404(ExcalidrawRoom, room_name=board_id)
+            board.users_that_can_draw.set(checked_users)
+            board.save()
+            messages.success(request, _("Pomyślnie przypisano uprawnienia do pisania!"))
+            return redirect('my')
+        except Exception as e:
+            messages.warning(request, _(f"Wystąpił błąd przy przypisywaniu uprawnień. Błąd: {e}"))
+            return redirect('my')
 @login_required
 def shared_board(request):
     accessible_boards = ExcalidrawRoom.objects.filter(Q(boards__users=request.user)).distinct().prefetch_related('boards').order_by('last_update')
-    return render(request, 'shered_whiteboards.html', {'tables': accessible_boards})
+    '''
+    formatted_borads = [
+        {
+            'table': board,
+            'can_user_draw': BoardGroups.objects.filter(boards=board, users=request.user, users_that_can_draw=request.user).exists()
+        }
+        for board in accessible_boards
+    ]
+    '''
+    formatted_borads = [
+        {
+            'board': board,
+            'can_user_draw': request.user in board.users_that_can_draw.all()
+        }
+        for board in accessible_boards
+    ]
+    return render(request, 'shered_whiteboards.html', {'tables': formatted_borads})
 
 
 @method_decorator(is_creator_or_in_staff, name='dispatch')

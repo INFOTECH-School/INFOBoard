@@ -69,6 +69,7 @@ class ExcalidrawRoomAdmin(admin.ModelAdmin):
         "room_name",
         "user_room_name",
         "room_created_by",
+        "users_that_can_draw",
         "tracking_enabled",
         ("created_at", "last_update"),
         "room_link",
@@ -80,6 +81,7 @@ class ExcalidrawRoomAdmin(admin.ModelAdmin):
         "compressed_size", "uncompressed_size", "compression_degree"]
     list_display = ["user_room_name", "room_link", "compressed_size", "created_at", "last_update"]
     actions = ["discard_unused_rooms", "clone_rooms"]
+    filter_horizontal = ['users_that_can_draw']
 
     @admin.display(description=_("View Room"))
     def room_link(self, obj: m.ExcalidrawRoom):
@@ -153,6 +155,7 @@ class BoardGroupsAdmin(admin.ModelAdmin):
         'code',
         'owner',
         'users',
+        'users_that_can_draw',
         'boards'
     ]
-    filter_horizontal = ['users', 'boards']
+    filter_horizontal = ['users', 'users_that_can_draw', 'boards']
