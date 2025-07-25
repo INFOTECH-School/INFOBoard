@@ -197,8 +197,6 @@
                   {{ user }}
                 </label>
               </div>
-            {% empty %}
-              <p class="text-danger">Brak użytkowników w grupie.</p><p>Aby użytkownik mógł edytować tablicę, należy dodać ją do grupy, w której znajduje się ten użytkownik i zaznaczyć go na liście </p>
             {% endfor %}
           {% for user in users_that_can_draw %}
               <div class="form-check">
@@ -212,10 +210,14 @@
           <input type="hidden" name="board_id" id="addWritingUsersBoardModalBoardId" value="">
 
         </div>
-        {% if users|length > 0 %}
+        {% if users|length > 0 or users_that_can_draw|length > 0 %}
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
           <button id="beloved_users" type="submit" class="btn btn-primary">Wyślij</button>
+        </div>
+        {% else %}
+        <div class="modal-body">
+          <p class="text-danger">Brak użytkowników w grupie.</p><p>Aby użytkownik mógł edytować tablicę, należy dodać ją do grupy, w której znajduje się ten użytkownik i zaznaczyć go na liście </p>
         </div>
         {% endif %}
       </form>
