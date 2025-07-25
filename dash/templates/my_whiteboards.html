@@ -41,7 +41,7 @@
                      data-board-name="{{ board.user_room_name }}"
                      data-bs-toggle="modal"
                      data-bs-target="#addWritingUsersBoardModal">
-                    Pozwól osobom rysować
+                    Pozwól rysować osobom
                   </a>
                   <div class="dropdown-divider"></div>
                   <a class="dropdown-item delete-board" href="#"
@@ -189,8 +189,6 @@
         <div class="modal-body">
           <!-- Hidden input for method -->
           <input type="hidden" name="_method" value="PATCH">
-
-          <p>Wybierz osoby:</p>
           <div class="mb-3">
             {% for user in users %}
               <div class="form-check">
@@ -199,6 +197,8 @@
                   {{ user }}
                 </label>
               </div>
+            {% empty %}
+              <p class="text-danger">Brak użytkowników w grupie.</p><p>Aby użytkownik mógł edytować tablicę, należy dodać ją do grupy, w której znajduje się ten użytkownik i zaznaczyć go na liście </p>
             {% endfor %}
           {% for user in users_that_can_draw %}
               <div class="form-check">
