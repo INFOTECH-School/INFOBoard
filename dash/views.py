@@ -46,7 +46,7 @@ class MyBoardView(View):
     template_name = 'my_whiteboards.html'
 
     def get(self, request):
-        tables = ExcalidrawRoom.objects.filter(room_created_by=request.user).all()
+        tables = ExcalidrawRoom.objects.filter(room_created_by=request.user).all().order_by('-last_update')
         # Annotate each board with the comma-separated list of group IDs that contain the board.
         for board in tables:
             board.group_ids = ",".join(str(group.group_id) for group in board.boards.all())

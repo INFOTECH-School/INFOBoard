@@ -3,15 +3,36 @@
 
 {% block site_name %}Moje Tablice{% endblock %}
 {% block site_actions %}
-  <a class="btn btn-primary btn-sm d-sm-inline-block" role="button" href="#" data-bs-toggle="modal" data-bs-target="#nowaTablicaModal">
-    <i class="fas fa-plus fa-sm text-white-50"></i>&nbsp;Nowa Tablica
+  <div class="d-flex flex-column flex-md-row gap-2 align-items-stretch align-items-md-center w-100">
+
+
+    <div class="input-group" style="max-width:420px;">
+      <span class="input-group-text" id="searchIcon" title="Szukaj tablic">
+        <i class="fas fa-search"></i>
+      </span>
+      <input
+        id="boardSearch"
+        type="search"
+        class="form-control"
+        placeholder="Szukaj tablic…"
+        aria-label="Szukaj tablic"
+        aria-describedby="searchIcon"
+      >
+      <button id="clearSearch" class="btn btn-outline-secondary" type="button" title="Wyczyść">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+
+  <a class="btn btn-primary btn-sm d-sm-inline-block" style="white-space: nowrap;" role="button" href="#" data-bs-toggle="modal" data-bs-target="#nowaTablicaModal">
+    <i class="fas fa-plus fa-sm text-white-50"></i><test >&nbsp;Nowa Tablica</test>
   </a>
 {% endblock %}
 {% block content %}
   <div id="cards" class="row" style="overflow-y: scroll;height: 70vh;">
     {% if tables %}
       {% for board in tables %}
-        <div class="col-md-6 col-xl-3 mb-4">
+        <div class="col-md-6 col-xl-3 mb-4" data-board-name="{{ board.user_room_name|lower }}">
           <div class="card shadow border-left-success py-2">
             <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
               <span class="text-primary fw-bold m-0 text-wrap">{{ board.user_room_name }}</span>
@@ -74,7 +95,7 @@
         </div>
       {% endfor %}
     {% else %}
-      <div class="col-md-6 col-xl-3 mb-4">
+      <div class="col-md-6 col-xl-3 mb-4" data-board-name="{{ board.user_room_name|lower }}">
         <div class="card shadow border-left-danger py-2">
           <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
             <span class="text-primary fw-bold m-0">Brak tablic</span>
@@ -310,4 +331,101 @@
     });
 
   </script>
+
+
+<script>
+  (function () {
+    const input = document.getElementById('boardSearch');
+    const clearBtn = document.getElementById('clearSearch');
+    const grid = document.getElementById('cards') || document.querySelector('[data-cards-grid], .row');
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll('[data-board-name]'));
+    let noResultsEl = null;
+    let debounceTimer = null;
+
+    const norm = s => (s || '')
+      .toString()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
+    function ensureNoResultsEl() {
+      if (!noResultsEl) {
+        noResultsEl = document.createElement('div');
+        noResultsEl.className = 'col-12';
+        noResultsEl.innerHTML = `
+          <div class="alert alert-warning shadow-sm mb-4" role="alert">
+            Brak wyników dla podanego wyszukiwania.
+          </div>`;
+      }
+      return noResultsEl;
+    }
+
+    function highlightName(cardEl, queryRaw) {
+      const nameSpan = cardEl.querySelector('.card-header span.text-primary, .card-header .text-primary, .card-header strong');
+      if (!nameSpan) return;
+      const original = nameSpan.getAttribute('data-original') || nameSpan.textContent;
+      if (!nameSpan.getAttribute('data-original')) {
+        nameSpan.setAttribute('data-original', original);
+      }
+      if (!queryRaw) {
+        nameSpan.innerHTML = original;
+        return;
+      }
+      const q = norm(queryRaw);
+      const text = original;
+      const textNorm = norm(text);
+      const idx = textNorm.indexOf(q);
+      if (idx === -1) { nameSpan.innerHTML = original; return; }
+      const start = idx;
+      const end = idx + q.length;
+      nameSpan.innerHTML = [
+        text.slice(0, start),
+        '<mark>',
+        text.slice(start, end),
+        '</mark>',
+        text.slice(end)
+      ].join('');
+    }
+
+    function applyFilter(qRaw) {
+      const q = norm(qRaw);
+      let visible = 0;
+      cards.forEach(card => {
+        const hay = norm(card.getAttribute('data-board-name'));
+        const match = !q || hay.includes(q);
+        card.style.display = match ? '' : 'none';
+        highlightName(card, match ? qRaw : '');
+        if (match) visible++;
+      });
+      if (visible === 0) {
+        const el = ensureNoResultsEl();
+        if (!grid.contains(el)) grid.appendChild(el);
+      } else if (noResultsEl && grid.contains(noResultsEl)) {
+        grid.removeChild(noResultsEl);
+      }
+    }
+
+    function debouncedFilter() {
+      window.clearTimeout(debounceTimer);
+      debounceTimer = window.setTimeout(() => applyFilter(input.value), 120);
+    }
+
+    input?.addEventListener('input', debouncedFilter);
+    clearBtn?.addEventListener('click', () => {
+      input.value = '';
+      input.focus();
+      applyFilter('');
+    });
+
+    const params = new URLSearchParams(location.search);
+    const preset = params.get('q');
+    if (preset) {
+      input.value = preset;
+      applyFilter(preset);
+    }
+  })();
+</script>
+
 {% endblock %}
