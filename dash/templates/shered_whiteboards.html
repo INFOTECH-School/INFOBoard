@@ -9,7 +9,7 @@
         <div class="col-md-6 col-xl-3 mb-4">
           <div class="card shadow border-left-secondary py-2">
             <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
-              <span class="text-primary fw-bold m-0 text-wrap">{% if table.can_user_draw %}<i style="color:darkgoldenrod" class="fas fa-edit" title="Możesz edytować tę tablicę!"></i>{% endif %} {{ table.board.user_room_name }}</span>
+              <span class="text-primary fw-bold m-0 board-title">{% if table.can_user_draw %}<i style="color:darkgoldenrod" class="fas fa-edit" title="Możesz edytować tę tablicę!"></i>{% endif %} {{ table.board.user_room_name }}</span>
             </div>
             <div class="card-body" style="background: transparent;">
               <div class="row g-0 align-items-center">

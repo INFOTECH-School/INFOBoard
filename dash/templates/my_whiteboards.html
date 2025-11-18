@@ -34,8 +34,10 @@
       {% for board in tables %}
         <div class="col-md-6 col-xl-3 mb-4" data-board-name="{{ board.user_room_name|lower }}">
           <div class="card shadow border-left-success py-2">
-            <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
-              <span class="text-primary fw-bold m-0 text-wrap">{{ board.user_room_name }}</span>
+            <div class="card-header d-flex justify-content-between align-items-center gap-2" style="background: transparent;">
+              <span class="text-primary fw-bold m-0 board-title">
+                {{ board.user_room_name }}
+              </span>
               <div class="dropdown no-arrow">
                 <button class="btn btn-link btn-sm dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" type="button">
                   <i class="fas fa-ellipsis-v text-gray-400"></i>
