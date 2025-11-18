@@ -133,7 +133,7 @@
             {% csrf_token %}
             <div class="mb-3">
               <label for="tablicaNazwa" class="form-label">Nazwa Tablicy</label>
-              <input type="text" class="form-control" id="tablicaNazwa" name="room_name" minlength="5" maxlength="17" placeholder="Wprowadź nazwę tablicy" required>
+              <input type="text" class="form-control" id="tablicaNazwa" name="room_name" minlength="5" maxlength="50" placeholder="Wprowadź nazwę tablicy" required>
             </div>
           </div>
           <div class="modal-footer">
@@ -182,7 +182,7 @@
           <div class="modal-body">
             <div class="mb-3">
               <label for="renameBoardInput" class="form-label">Nowa nazwa tablicy</label>
-              <input type="text" class="form-control" id="renameBoardInput" name="new_room_name" required maxlength="17" minlength="5">
+              <input type="text" class="form-control" id="renameBoardInput" name="new_room_name" required maxlength="50" minlength="5">
             </div>
             <!-- Hidden field for board id -->
             <input type="hidden" name="room_name" id="renameBoardId" value="">

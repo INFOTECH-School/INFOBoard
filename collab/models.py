@@ -115,7 +115,7 @@ class ExcalidrawRoom(models.Model):
     room_created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
     tracking_enabled = models.BooleanField(_("track users' actions"), default=settings.ENABLE_TRACKING_BY_DEFAULT)
     _elements = models.BinaryField(blank=True, default=EMPTY_JSON_LIST_ZLIB_COMPRESSED)
-    user_room_name = models.CharField(max_length=24, editable=True, null=False, blank=False, default=make_room_name(17))
+    user_room_name = models.CharField(max_length=50, editable=True, null=False, blank=False, default=make_room_name(50))
     users_that_can_draw = models.ManyToManyField(CustomUser, related_name='drawing_users_in_table', blank=True)
 
     @property

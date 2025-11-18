@@ -20,7 +20,7 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
-    "@excalidraw/excalidraw": "^0.17.6",
+    "@excalidraw/excalidraw": "^0.18.0",
     "esbuild": "^0.14.54",
     "lodash": "^4.17.21",
     "qrcode-generator": "^1.4.4",
