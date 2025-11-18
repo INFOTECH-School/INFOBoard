@@ -43,7 +43,7 @@ def redirect_to_my(request):
 
 @method_decorator(is_creator_or_in_staff, name='dispatch')
 class MyBoardView(View):
-    template_name = '6my_whiteboards.html'
+    template_name = 'my_whiteboards.html'
 
     def get(self, request):
         tables = ExcalidrawRoom.objects.filter(room_created_by=request.user).all().order_by('-last_update')
