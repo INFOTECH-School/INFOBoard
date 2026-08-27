@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.contrib.admin.actions import delete_selected
 from django.contrib import messages
 from django.contrib.auth.admin import UserAdmin, Group
+from django.db.models.functions import Length
+from django.template.defaultfilters import filesizeformat
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
@@ -71,6 +73,7 @@ class ExcalidrawRoomAdmin(admin.ModelAdmin):
         "room_created_by",
         "users_that_can_draw",
         "tracking_enabled",
+        "archived_at",
         ("created_at", "last_update"),
         "room_link",
         "room_json",
@@ -79,9 +82,21 @@ class ExcalidrawRoomAdmin(admin.ModelAdmin):
     readonly_fields = [
         "room_name", "room_json", "replay_link", "room_link", "last_update", "created_at",
         "compressed_size", "uncompressed_size", "compression_degree"]
-    list_display = ["user_room_name", "room_link", "compressed_size", "created_at", "last_update"]
-    actions = ["discard_unused_rooms", "clone_rooms"]
+    list_display = ["user_room_name", "room_link", "compressed_size_display", "created_at", "last_update", "archived_at"]
+    list_filter = ["archived_at"]
+    actions = ["discard_unused_rooms", "clone_rooms", "archive_rooms", "restore_rooms"]
     filter_horizontal = ['users_that_can_draw']
+
+    def get_queryset(self, request):
+        # The changelist only needs the byte size of ``_elements``, not its content.
+        # Defer the (potentially large) blob and compute its length in the database
+        # so the list view does not transfer every room's drawing data.
+        qs = super().get_queryset(request)
+        return qs.defer("_elements").annotate(_elements_len=Length("_elements"))
+
+    @admin.display(description=_("compressed size"), ordering="_elements_len")
+    def compressed_size_display(self, obj: m.ExcalidrawRoom):
+        return filesizeformat(getattr(obj, "_elements_len", 0) or 0)
 
     @admin.display(description=_("View Room"))
     def room_link(self, obj: m.ExcalidrawRoom):
@@ -120,12 +135,34 @@ class ExcalidrawRoomAdmin(admin.ModelAdmin):
     @admin.display(description=_("Clone room(s)"))
     def clone_rooms(self, request, queryset):
         new_rooms = []
-        for room in queryset:
+        # Re-fetch full instances: the changelist queryset defers ``_elements``,
+        # but cloning needs the drawing content.
+        full_rooms = m.ExcalidrawRoom.objects.filter(
+            pk__in=list(queryset.values_list("pk", flat=True)))
+        for room in full_rooms:
             new_rooms.append(room.clone(None, request.user))
         self.message_user(
             request,
             _("Rooms created: %s") % ", ".join([r.room_name for r in new_rooms]),
             messages.SUCCESS)
+
+    @admin.display(description=_("Archive selected rooms"))
+    def archive_rooms(self, request, queryset):
+        updated = 0
+        for room in queryset:
+            if not room.is_archived:
+                room.archive()
+                updated += 1
+        self.message_user(request, _("Archived %d room(s).") % updated, messages.SUCCESS)
+
+    @admin.display(description=_("Restore selected rooms"))
+    def restore_rooms(self, request, queryset):
+        updated = 0
+        for room in queryset:
+            if room.is_archived:
+                room.restore()
+                updated += 1
+        self.message_user(request, _("Restored %d room(s).") % updated, messages.SUCCESS)
 
 
 @admin.register(m.Pseudonym)

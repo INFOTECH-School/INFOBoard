@@ -67,6 +67,13 @@
                     Pozwól rysować osobom
                   </a>
                   <div class="dropdown-divider"></div>
+                  <a class="dropdown-item archive-board" href="#"
+                     data-board-id="{{ board.room_name }}"
+                     data-board-name="{{ board.user_room_name }}"
+                     data-bs-toggle="modal"
+                     data-bs-target="#archiveBoardModal">
+                    Archiwizuj
+                  </a>
                   <a class="dropdown-item delete-board" href="#"
                      data-board-id="{{ board.room_name }}"
                      data-board-name="{{ board.user_room_name }}"
@@ -165,6 +172,30 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
             <button type="submit" class="btn btn-danger">Usuń</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Potwierdzenie archiwizacji tablicy -->
+  <div class="modal fade" id="archiveBoardModal" tabindex="-1" aria-labelledby="archiveBoardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="archiveBoardModalLabel">Archiwizacja tablicy</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+        </div>
+        <form method="POST" action="{% url 'my' %}">
+          {% csrf_token %}
+          <div class="modal-body">
+            <p>Czy na pewno chcesz zarchiwizować tablicę <strong id="archiveModalBoardName"></strong>? Tablica zniknie z aktywnej listy, ale będzie ją można przywrócić z archiwum.</p>
+            <input type="hidden" name="room_name" id="archiveModalBoardId" value="">
+            <input type="hidden" name="_method" value="ARCHIVE">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+            <button type="submit" class="btn btn-warning">Archiwizuj</button>
           </div>
         </form>
       </div>
@@ -294,6 +325,16 @@
       var modalBoardId = deleteBoardModal.querySelector('#modalBoardId');
       modalBoardName.textContent = boardName;
       modalBoardId.value = boardId;
+    });
+
+    // Modal: Archive Board
+    var archiveBoardModal = document.getElementById('archiveBoardModal');
+    archiveBoardModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      var boardName = button.getAttribute('data-board-name');
+      var boardId = button.getAttribute('data-board-id');
+      archiveBoardModal.querySelector('#archiveModalBoardName').textContent = boardName;
+      archiveBoardModal.querySelector('#archiveModalBoardId').value = boardId;
     });
 
     // Modal: Rename Board

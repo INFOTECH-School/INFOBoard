@@ -48,6 +48,11 @@
               <span>Moje Grupy</span>
             </a>
             <hr>
+            <a class="nav-link {% if request.resolver_match.url_name == 'archived' %}active{% endif %}" href="{% url 'archived' %}" style="font-size: 0.9rem;">
+              <i class="fas fa-archive"></i>
+              <span>Archiwum</span>
+            </a>
+            <hr>
           {% endif %}
             <a class="nav-link {% if request.resolver_match.url_name == 'shared' %}active{% endif %}" href="{% url 'shared' %}" style="font-size: 0.9rem;">
               <i class="far fa-share-square"></i>

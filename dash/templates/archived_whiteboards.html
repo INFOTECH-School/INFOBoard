@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block site_name %}Archiwum Tablic{% endblock %}
+{% block site_actions %}
+  <div class="d-flex flex-column flex-md-row gap-2 align-items-stretch align-items-md-center w-100">
+    <div class="input-group" style="max-width:420px;">
+      <span class="input-group-text" id="searchIcon" title="Szukaj tablic">
+        <i class="fas fa-search"></i>
+      </span>
+      <input
+        id="boardSearch"
+        type="search"
+        class="form-control"
+        placeholder="Szukaj w archiwum…"
+        aria-label="Szukaj tablic"
+        aria-describedby="searchIcon"
+      >
+      <button id="clearSearch" class="btn btn-outline-secondary" type="button" title="Wyczyść">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+{% endblock %}
+{% block content %}
+  <div id="cards" class="row" style="overflow-y: scroll;height: 70vh;">
+    {% if tables %}
+      {% for board in tables %}
+        <div class="col-md-6 col-xl-3 mb-4" data-board-name="{{ board.user_room_name|lower }}">
+          <div class="card shadow border-left-warning py-2">
+            <div class="card-header d-flex justify-content-between align-items-center gap-2" style="background: transparent;">
+              <span class="text-primary fw-bold m-0 board-title">
+                {{ board.user_room_name }}
+              </span>
+              <div class="dropdown no-arrow">
+                <button class="btn btn-link btn-sm dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" type="button">
+                  <i class="fas fa-ellipsis-v text-gray-400"></i>
+                </button>
+                <div class="dropdown-menu shadow dropdown-menu-end animated--fade-in">
+                  <p class="text-center dropdown-header">Akcje</p>
+                  <a class="dropdown-item restore-board" href="#"
+                     data-board-id="{{ board.room_name }}"
+                     data-board-name="{{ board.user_room_name }}"
+                     data-bs-toggle="modal"
+                     data-bs-target="#restoreBoardModal">
+                    Przywróć
+                  </a>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item delete-board" href="#"
+                     data-board-id="{{ board.room_name }}"
+                     data-board-name="{{ board.user_room_name }}"
+                     data-bs-toggle="modal"
+                     data-bs-target="#deleteBoardModal">
+                    Usuń trwale
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div class="card-body" style="background: transparent;">
+              <div class="row g-0 align-items-center">
+                <div class="col me-2">
+                  <div class="text-uppercase text-primary fw-bold text-xs mb-1">
+                    <span class="d-lg-flex justify-content-lg-start">Zarchiwizowano:&nbsp;<b>{{ board.archived_at }}</b></span>
+                    <span class="d-lg-flex justify-content-lg-start">Utworzono: {{ board.created_at }}</span>
+                  </div>
+                  <div class="text-dark fw-bold h5 mb-0">
+                    <hr>
+                    <button class="btn btn-success restore-board" type="button"
+                            data-board-id="{{ board.room_name }}"
+                            data-board-name="{{ board.user_room_name }}"
+                            data-bs-toggle="modal"
+                            data-bs-target="#restoreBoardModal">Przywróć</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="col-md-6 col-xl-3 mb-4">
+        <div class="card shadow border-left-secondary py-2">
+          <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
+            <span class="text-primary fw-bold m-0">Archiwum jest puste</span>
+          </div>
+          <div class="card-body" style="background: transparent;">
+            <div class="row g-0 align-items-center">
+              <div class="col me-2">
+                <div class="text-uppercase text-primary fw-bold text-xs mb-1">
+                  <span class="d-lg-flex justify-content-lg-start">Zarchiwizowane tablice pojawią się tutaj</span>
+                </div>
+                <div class="text-dark fw-bold h5 mb-0">
+                  <hr>
+                  <a href="{% url 'my' %}"><button class="btn btn-primary" type="button">Moje Tablice</button></a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block modals %}
+  <!-- Modal: Potwierdzenie przywrócenia tablicy -->
+  <div class="modal fade" id="restoreBoardModal" tabindex="-1" aria-labelledby="restoreBoardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="restoreBoardModalLabel">Przywracanie tablicy</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+        </div>
+        <form method="POST" action="{% url 'archived' %}">
+          {% csrf_token %}
+          <div class="modal-body">
+            <p>Czy na pewno chcesz przywrócić tablicę <strong id="restoreModalBoardName"></strong>? Wróci ona na listę „Moje Tablice".</p>
+            <input type="hidden" name="room_name" id="restoreModalBoardId" value="">
+            <input type="hidden" name="_method" value="RESTORE">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+            <button type="submit" class="btn btn-success">Przywróć</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Potwierdzenie trwałego usunięcia tablicy -->
+  <div class="modal fade" id="deleteBoardModal" tabindex="-1" aria-labelledby="deleteBoardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteBoardModalLabel">Trwałe usunięcie tablicy</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+        </div>
+        <form method="POST" action="{% url 'archived' %}">
+          {% csrf_token %}
+          <div class="modal-body">
+            <p>Czy na pewno chcesz <strong>trwale usunąć</strong> tablicę <strong id="modalBoardName"></strong>? Tej operacji nie można cofnąć.</p>
+            <input type="hidden" name="room_name" id="modalBoardId" value="">
+            <input type="hidden" name="_method" value="DELETE">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+            <button type="submit" class="btn btn-danger">Usuń trwale</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_script %}
+  <script>
+    // Modal: Restore Board
+    var restoreBoardModal = document.getElementById('restoreBoardModal');
+    restoreBoardModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      restoreBoardModal.querySelector('#restoreModalBoardName').textContent = button.getAttribute('data-board-name');
+      restoreBoardModal.querySelector('#restoreModalBoardId').value = button.getAttribute('data-board-id');
+    });
+
+    // Modal: Delete Board (permanent)
+    var deleteBoardModal = document.getElementById('deleteBoardModal');
+    deleteBoardModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      deleteBoardModal.querySelector('#modalBoardName').textContent = button.getAttribute('data-board-name');
+      deleteBoardModal.querySelector('#modalBoardId').value = button.getAttribute('data-board-id');
+    });
+  </script>
+
+  <script>
+    (function () {
+      const input = document.getElementById('boardSearch');
+      const clearBtn = document.getElementById('clearSearch');
+      const grid = document.getElementById('cards');
+      if (!grid) return;
+      const cards = Array.from(grid.querySelectorAll('[data-board-name]'));
+
+      const norm = s => (s || '')
+        .toString().toLowerCase().normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '').trim();
+
+      function applyFilter(qRaw) {
+        const q = norm(qRaw);
+        cards.forEach(card => {
+          const hay = norm(card.getAttribute('data-board-name'));
+          card.style.display = (!q || hay.includes(q)) ? '' : 'none';
+        });
+      }
+
+      input?.addEventListener('input', () => applyFilter(input.value));
+      clearBtn?.addEventListener('click', () => { input.value = ''; input.focus(); applyFilter(''); });
+    })();
+  </script>
+{% endblock %}

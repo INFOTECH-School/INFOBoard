@@ -14,6 +14,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.validators import MinLengthValidator, MaxLengthValidator
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from draw.utils import (JSONType, bytes_to_data_uri, compression_ratio, dump_content, load_content, make_room_name,
@@ -113,6 +114,7 @@ class ExcalidrawRoom(models.Model):
     room_name = models.UUIDField(
         primary_key=True, default=uuid.uuid4)
     room_created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
+    archived_at = models.DateTimeField(_("data archiwizacji"), null=True, blank=True, default=None)
     tracking_enabled = models.BooleanField(_("track users' actions"), default=settings.ENABLE_TRACKING_BY_DEFAULT)
     _elements = models.BinaryField(blank=True, default=EMPTY_JSON_LIST_ZLIB_COMPRESSED)
     user_room_name = models.CharField(max_length=50, editable=True, null=False, blank=False, default=make_room_name(50))
@@ -137,6 +139,22 @@ class ExcalidrawRoom(models.Model):
     @property
     def compression_degree(self):
         return compression_ratio(self)
+
+    @property
+    def is_archived(self) -> bool:
+        return self.archived_at is not None
+
+    def archive(self):
+        """Mark the room as archived so it is hidden from the active lists."""
+        if self.archived_at is None:
+            self.archived_at = timezone.now()
+            self.save(update_fields=['archived_at'])
+
+    def restore(self):
+        """Bring an archived room back to the active lists."""
+        if self.archived_at is not None:
+            self.archived_at = None
+            self.save(update_fields=['archived_at'])
 
     def clone(self, *, room_course_id: str, room_created_by: CustomUser):
         """
