@@ -46,7 +46,8 @@ class MyBoardView(View):
     template_name = 'my_whiteboards.html'
 
     def get(self, request):
-        tables = ExcalidrawRoom.objects.filter(room_created_by=request.user).all().order_by('-last_update')
+        tables = ExcalidrawRoom.objects.filter(
+            room_created_by=request.user, archived_at__isnull=True).all().order_by('-last_update')
         # Annotate each board with the comma-separated list of group IDs that contain the board.
         for board in tables:
             board.group_ids = ",".join(str(group.group_id) for group in board.boards.all())
@@ -76,6 +77,9 @@ class MyBoardView(View):
 
         if request.POST.get('_method') == 'PATCH':
             return self.patch(request)
+
+        if request.POST.get('_method') == 'ARCHIVE':
+            return self.archive(request)
 
         room_name = request.POST.get('room_name')
         if not room_name:
@@ -107,6 +111,22 @@ class MyBoardView(View):
 
         room.delete()
         messages.success(request, _("Pomyślnie usunięto tablicę!"))
+        return redirect('my')
+
+    def archive(self, request):
+        room_name = request.POST.get('room_name')
+        if not room_name:
+            messages.error(request, _("Nie podano nazwy tablicy."))
+            return redirect('my')
+
+        try:
+            room = ExcalidrawRoom.objects.get(room_name=room_name, room_created_by=request.user)
+        except ExcalidrawRoom.DoesNotExist:
+            messages.error(request, _("Nie znaleziono tablicy o podanej nazwie."))
+            return redirect('my')
+
+        room.archive()
+        messages.success(request, _("Tablica została zarchiwizowana."))
         return redirect('my')
 
     def put(self, request):
@@ -142,7 +162,9 @@ class MyBoardView(View):
             return redirect('my')
 @login_required
 def shared_board(request):
-    accessible_boards = ExcalidrawRoom.objects.filter(Q(boards__users=request.user)).distinct().prefetch_related('boards').order_by('last_update')
+    accessible_boards = ExcalidrawRoom.objects.filter(
+        Q(boards__users=request.user), archived_at__isnull=True
+    ).distinct().prefetch_related('boards').order_by('last_update')
     '''
     formatted_borads = [
         {
@@ -160,6 +182,48 @@ def shared_board(request):
         for board in accessible_boards
     ]
     return render(request, 'shered_whiteboards.html', {'tables': formatted_borads})
+
+
+@method_decorator(is_creator_or_in_staff, name='dispatch')
+class ArchivedBoardView(View):
+    template_name = 'archived_whiteboards.html'
+
+    def get(self, request):
+        tables = ExcalidrawRoom.objects.filter(
+            room_created_by=request.user, archived_at__isnull=False).all().order_by('-archived_at')
+        return render(request, self.template_name, {'tables': tables})
+
+    def post(self, request):
+        if request.POST.get('_method') == 'DELETE':
+            return self.delete(request)
+        return self.restore(request)
+
+    def _get_room(self, request):
+        room_name = request.POST.get('room_name')
+        if not room_name:
+            messages.error(request, _("Nie podano nazwy tablicy."))
+            return None
+        try:
+            return ExcalidrawRoom.objects.get(room_name=room_name, room_created_by=request.user)
+        except ExcalidrawRoom.DoesNotExist:
+            messages.error(request, _("Nie znaleziono tablicy o podanej nazwie."))
+            return None
+
+    def restore(self, request):
+        room = self._get_room(request)
+        if room is None:
+            return redirect('archived')
+        room.restore()
+        messages.success(request, _("Tablica została przywrócona."))
+        return redirect('archived')
+
+    def delete(self, request):
+        room = self._get_room(request)
+        if room is None:
+            return redirect('archived')
+        room.delete()
+        messages.success(request, _("Pomyślnie usunięto tablicę!"))
+        return redirect('archived')
 
 
 @method_decorator(is_creator_or_in_staff, name='dispatch')
