@@ -43,7 +43,9 @@ USER builder
 COPY --chown=builder:builder ./wheels.requirements.txt .
 
 RUN mkdir -p wheels
-RUN pip install --no-cache-dir -U pip setuptools wheel
+# setuptools>=81 usunęło moduł pkg_resources, którego wymaga gunicorn==20.1.0,
+# dlatego przypinamy setuptools poniżej tej wersji.
+RUN pip install --no-cache-dir -U pip wheel 'setuptools<81'
 RUN pip wheel -r wheels.requirements.txt -w ./wheels/
 
 # --------------------- Final Stage ---------------------
@@ -52,7 +54,9 @@ FROM python:3.10-slim AS ltiapp
 WORKDIR /srv
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -U pip setuptools wheel
+# setuptools>=81 usunęło moduł pkg_resources, którego wymaga gunicorn==20.1.0,
+# dlatego przypinamy setuptools poniżej tej wersji.
+RUN pip install --no-cache-dir -U pip wheel 'setuptools<81'
 
 RUN apt update \
     && apt upgrade -y \
