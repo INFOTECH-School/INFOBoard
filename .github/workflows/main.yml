@@ -10,6 +10,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     env:
       # Jeśli push pochodzi z tagu, IMAGE_TAG przyjmie wartość nazwy tagu,
       # w przeciwnym przypadku zostanie ustawione na "main"
