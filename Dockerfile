@@ -7,7 +7,7 @@ RUN apt update \
     && apt upgrade -y \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-    && npm i -g -f pnpm
+    && npm i -g -f pnpm@9
 
 RUN groupadd -r builder \
     && useradd --no-log-init -r -m -g builder builder \
