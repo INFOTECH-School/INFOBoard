@@ -193,6 +193,28 @@ class BoardGroupsAdmin(admin.ModelAdmin):
         'owner',
         'users',
         'users_that_can_draw',
-        'boards'
+        'boards',
+        'archived_at',
     ]
+    list_display = ['__str__', 'class_name', 'class_year', 'owner', 'archived_at']
+    list_filter = ['archived_at']
+    actions = ['archive_groups', 'restore_groups']
     filter_horizontal = ['users', 'users_that_can_draw', 'boards']
+
+    @admin.display(description=_("Archive selected groups (with their boards)"))
+    def archive_groups(self, request, queryset):
+        updated = 0
+        for group in queryset:
+            if not group.is_archived:
+                group.archive()
+                updated += 1
+        self.message_user(request, _("Archived %d group(s).") % updated, messages.SUCCESS)
+
+    @admin.display(description=_("Restore selected groups (with their boards)"))
+    def restore_groups(self, request, queryset):
+        updated = 0
+        for group in queryset:
+            if group.is_archived:
+                group.restore()
+                updated += 1
+        self.message_user(request, _("Restored %d group(s).") % updated, messages.SUCCESS)

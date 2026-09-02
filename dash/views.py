@@ -231,15 +231,17 @@ class MyBoardGroup(View):
     template_name = 'boards_group.html'
 
     def get(self, request):
-        # Get all groups owned by the user and annotate with the count of boards
-        groups = BoardGroups.objects.filter(owner=request.user).annotate(board_count=Count('boards')).all()
+        # Get all non-archived groups owned by the user and annotate with the count of boards
+        groups = BoardGroups.objects.filter(
+            owner=request.user, archived_at__isnull=True).annotate(board_count=Count('boards')).all()
 
         # Annotate each group with the comma-separated list of board IDs (for modal checkbox checking)
         for group in groups:
             group.board_ids = ",".join(str(board.room_name) for board in group.boards.all())
 
-        # Get all boards created by the user
-        boards = ExcalidrawRoom.objects.filter(room_created_by=request.user).all()
+        # Get all non-archived boards created by the user
+        boards = ExcalidrawRoom.objects.filter(
+            room_created_by=request.user, archived_at__isnull=True).all()
 
         return render(request, self.template_name, {'groups': groups, 'boards': boards})
 
@@ -251,6 +253,9 @@ class MyBoardGroup(View):
 
         if request.POST.get('_method') == 'PUT':
             return self.put(request)
+
+        if request.POST.get('_method') == 'ARCHIVE':
+            return self.archive(request)
 
         class_name = request.POST.get('class_name')
         if not class_name:
@@ -295,6 +300,23 @@ class MyBoardGroup(View):
         return redirect('my_board_groups')
 
     @method_decorator(require_group_owner)
+    def archive(self, request):
+        group_id = request.POST.get('group_id')
+        if not group_id:
+            messages.error(request, _("Nie podano ID grupy."))
+            return redirect('my_board_groups')
+
+        try:
+            group = BoardGroups.objects.get(group_id=group_id, owner=request.user)
+        except BoardGroups.DoesNotExist:
+            messages.add_message(request, 35, _("Nie znaleziono grupy o podanym ID."), 'danger')
+            return redirect('my_board_groups')
+
+        group.archive()
+        messages.success(request, _("Grupa i jej tablice zostały zarchiwizowane."))
+        return redirect('my_board_groups')
+
+    @method_decorator(require_group_owner)
     def put(self, request):
         group_id = request.POST.get('group_id')
         new_class_name = request.POST.get('class_name')
@@ -318,6 +340,52 @@ class MyBoardGroup(View):
 
         messages.success(request, _("Pomyślnie zmieniono dane grupy!"))
         return redirect('my_board_groups')
+
+
+@method_decorator(is_creator_or_in_staff, name='dispatch')
+class ArchivedBoardGroup(View):
+    template_name = 'archived_boards_group.html'
+
+    def get(self, request):
+        groups = BoardGroups.objects.filter(
+            owner=request.user, archived_at__isnull=False
+        ).annotate(board_count=Count('boards')).all().order_by('-archived_at')
+        return render(request, self.template_name, {'groups': groups})
+
+    def post(self, request):
+        if request.POST.get('_method') == 'DELETE':
+            return self.delete(request)
+        return self.restore(request)
+
+    def _get_group(self, request):
+        group_id = request.POST.get('group_id')
+        if not group_id:
+            messages.error(request, _("Nie podano ID grupy."))
+            return None
+        try:
+            return BoardGroups.objects.get(group_id=group_id, owner=request.user)
+        except BoardGroups.DoesNotExist:
+            messages.add_message(request, 35, _("Nie znaleziono grupy o podanym ID."), 'danger')
+            return None
+
+    @method_decorator(require_group_owner)
+    def restore(self, request):
+        group = self._get_group(request)
+        if group is None:
+            return redirect('archived_groups')
+        group.restore()
+        messages.success(request, _("Grupa i jej tablice zostały przywrócone."))
+        return redirect('archived_groups')
+
+    @method_decorator(require_group_owner)
+    def delete(self, request):
+        group = self._get_group(request)
+        if group is None:
+            return redirect('archived_groups')
+        group.delete()
+        messages.success(request, _("Pomyślnie usunięto grupę!"))
+        return redirect('archived_groups')
+
 
 @method_decorator(login_required, name='dispatch')
 class SharedBoardGroup(View):

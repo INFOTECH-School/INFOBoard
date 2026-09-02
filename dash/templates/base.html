@@ -50,7 +50,12 @@
             <hr>
             <a class="nav-link {% if request.resolver_match.url_name == 'archived' %}active{% endif %}" href="{% url 'archived' %}" style="font-size: 0.9rem;">
               <i class="fas fa-archive"></i>
-              <span>Archiwum</span>
+              <span>Archiwum Tablic</span>
+            </a>
+            <hr>
+            <a class="nav-link {% if request.resolver_match.url_name == 'archived_groups' %}active{% endif %}" href="{% url 'archived_groups' %}" style="font-size: 0.9rem;">
+              <i class="fas fa-box-open"></i>
+              <span>Archiwum Grup</span>
             </a>
             <hr>
           {% endif %}
