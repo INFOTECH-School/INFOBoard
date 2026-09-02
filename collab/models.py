@@ -313,9 +313,30 @@ class BoardGroups(models.Model):
     users = models.ManyToManyField(CustomUser, related_name='users_group', blank=True)
     users_that_can_draw = models.ManyToManyField(CustomUser, related_name='drawing_users_group', blank=True)
     boards = models.ManyToManyField(ExcalidrawRoom, related_name='boards', blank=True)
+    archived_at = models.DateTimeField(_("data archiwizacji"), null=True, blank=True, default=None)
 
     def __str__(self):
         return f"{self.class_name} {self.class_year} {self.category} {self.owner}"
+
+    @property
+    def is_archived(self) -> bool:
+        return self.archived_at is not None
+
+    def archive(self):
+        """Archive the group together with all of its boards."""
+        now = timezone.now()
+        if self.archived_at is None:
+            self.archived_at = now
+            self.save(update_fields=['archived_at'])
+        # cascade to the group's boards (skip the ones already archived)
+        self.boards.filter(archived_at__isnull=True).update(archived_at=now)
+
+    def restore(self):
+        """Restore the group together with all of its boards."""
+        if self.archived_at is not None:
+            self.archived_at = None
+            self.save(update_fields=['archived_at'])
+        self.boards.filter(archived_at__isnull=False).update(archived_at=None)
 
     def save(self, *args, **kwargs):
         if not self.code:

@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block site_name %}Archiwum Grup{% endblock %}
+
+{% block content %}
+<div id="cards" class="row" style="overflow-y: scroll;height: 70vh;">
+    {% if groups %}
+      {% for group in groups %}
+        <div class="col-md-6 col-xl-3 mb-4">
+          <div class="card shadow border-left-warning py-2">
+            <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
+              <span class="text-primary fw-bold m-0 text-wrap">{{ group.class_name }} {{ group.class_year }}</span>
+              <div class="dropdown no-arrow">
+                <button class="btn btn-link btn-sm dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" type="button">
+                  <i class="fas fa-ellipsis-v text-gray-400"></i>
+                </button>
+                <div class="dropdown-menu shadow dropdown-menu-end animated--fade-in">
+                  <p class="text-center dropdown-header">Akcje</p>
+                  <a class="dropdown-item restore-group-btn" href="#"
+                     data-group-id="{{ group.group_id }}"
+                     data-group-name="{{ group.class_name }} {{ group.class_year }}"
+                     data-group-boards="{{ group.board_count }}"
+                     data-bs-toggle="modal"
+                     data-bs-target="#restoreGroupModal">
+                    Przywróć
+                  </a>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item delete-group-btn" href="#"
+                     data-group-id="{{ group.group_id }}"
+                     data-group-name="{{ group.class_name }} {{ group.class_year }}"
+                     data-bs-toggle="modal"
+                     data-bs-target="#deleteGroupModal">
+                    Usuń trwale
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div class="card-body" style="background: transparent;">
+              <div class="row g-0 align-items-center">
+                <div class="col me-2">
+                  <div class="text-uppercase text-primary fw-bold text-xs mb-1">
+                    <span class="d-lg-flex justify-content-lg-start">Tablice:&nbsp;<b>{{ group.board_count }}</b></span>
+                    <span class="d-lg-flex justify-content-lg-start">Poziom:&nbsp;<b>{{ group.category }}</b></span>
+                    <span class="d-lg-flex justify-content-lg-start">Zarchiwizowano:&nbsp;<b>{{ group.archived_at }}</b></span>
+                  </div>
+                  <div class="text-dark fw-bold h5 mb-0">
+                    <hr>
+                    <button class="btn btn-success restore-group-btn" type="button"
+                            data-group-id="{{ group.group_id }}"
+                            data-group-name="{{ group.class_name }} {{ group.class_year }}"
+                            data-group-boards="{{ group.board_count }}"
+                            data-bs-toggle="modal"
+                            data-bs-target="#restoreGroupModal">Przywróć</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="col-md-6 col-xl-3 mb-4">
+        <div class="card shadow border-left-secondary py-2">
+          <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
+            <span class="text-primary fw-bold m-0">Archiwum grup jest puste</span>
+          </div>
+          <div class="card-body" style="background: transparent;">
+            <div class="row g-0 align-items-center">
+              <div class="col me-2">
+                <div class="text-uppercase text-primary fw-bold text-xs mb-1">
+                  <span class="d-lg-flex justify-content-lg-start">Zarchiwizowane grupy pojawią się tutaj</span>
+                </div>
+                <div class="text-dark fw-bold h5 mb-0">
+                  <hr>
+                  <a href="{% url 'my_board_groups' %}"><button class="btn btn-primary" type="button">Moje Grupy</button></a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block modals %}
+  <!-- Modal: Restore Group -->
+  <div class="modal fade" id="restoreGroupModal" tabindex="-1" aria-labelledby="restoreGroupModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="restoreGroupModalLabel">Przywracanie grupy</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+        </div>
+        <form method="POST" action="{% url 'archived_groups' %}">
+          {% csrf_token %}
+          <div class="modal-body">
+            <p>Czy na pewno chcesz przywrócić grupę <strong id="restoreModalGroupName"></strong>?</p>
+            <p class="text-muted mb-0">Razem z grupą zostanie przywróconych <strong id="restoreModalGroupBoards"></strong> jej tablic.</p>
+            <input type="hidden" name="group_id" id="restoreModalGroupId" value="">
+            <input type="hidden" name="_method" value="RESTORE">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+            <button type="submit" class="btn btn-success">Przywróć</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Delete Group (permanent) -->
+  <div class="modal fade" id="deleteGroupModal" tabindex="-1" aria-labelledby="deleteGroupModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteGroupModalLabel">Trwałe usunięcie grupy</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+        </div>
+        <form method="POST" action="{% url 'archived_groups' %}">
+          {% csrf_token %}
+          <div class="modal-body">
+            <p>Czy na pewno chcesz <strong>trwale usunąć</strong> grupę <strong id="modalGroupName"></strong>? Tej operacji nie można cofnąć.</p>
+            <p class="text-muted mb-0">Tablice należące do grupy nie zostaną usunięte — pozostaną w archiwum tablic.</p>
+            <input type="hidden" name="group_id" id="modalGroupId" value="">
+            <input type="hidden" name="_method" value="DELETE">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+            <button type="submit" class="btn btn-danger">Usuń trwale</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  var restoreGroupModal = document.getElementById('restoreGroupModal');
+  restoreGroupModal.addEventListener('show.bs.modal', function (event) {
+    var button = event.relatedTarget;
+    restoreGroupModal.querySelector('#restoreModalGroupName').textContent = button.getAttribute('data-group-name');
+    restoreGroupModal.querySelector('#restoreModalGroupBoards').textContent = button.getAttribute('data-group-boards');
+    restoreGroupModal.querySelector('#restoreModalGroupId').value = button.getAttribute('data-group-id');
+  });
+
+  var deleteGroupModal = document.getElementById('deleteGroupModal');
+  deleteGroupModal.addEventListener('show.bs.modal', function (event) {
+    var button = event.relatedTarget;
+    deleteGroupModal.querySelector('#modalGroupName').textContent = button.getAttribute('data-group-name');
+    deleteGroupModal.querySelector('#modalGroupId').value = button.getAttribute('data-group-id');
+  });
+</script>
+{% endblock %}

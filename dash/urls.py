@@ -10,6 +10,7 @@ urlpatterns = [
     path('boards/archived', views.ArchivedBoardView.as_view(), name='archived'),
     path('boards/shared', views.shared_board, name='shared'),
     path('group', views.MyBoardGroup.as_view(), name='my_board_groups'),
+    path('group/archived', views.ArchivedBoardGroup.as_view(), name='archived_groups'),
     path('group/shared', views.SharedBoardGroup.as_view(), name='shared_board_groups'),
     path('share_board', views.share_board, name='share_board'),
     path('manage_group_boards', views.manage_group_boards, name='manage_group_boards'),
